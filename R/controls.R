@@ -1,5 +1,25 @@
 #Copyright © 2016 RTE Réseau de transport d’électricité
 
+# Private function used to create input generator functions.
+mwControlFactory <- function(type, inputFunction, params, valueVar = NULL) {
+
+  res <- function(params) {
+    if (!is.null(valueVar)) {
+      if (length(valueVar) == 1) params[[valueVar]] <- params$value
+      else {
+        for (i in 1:length(valueVar)) params[[valueVar[i]]] <- params$value[[i]]
+      }
+      params$value <- NULL
+    }
+    if (is.null(params$label)) params$label <- params$inputId
+    do.call(inputFunction, params)
+  }
+
+  attr(res, "params") <- params
+  attr(res, "type") <- type
+  res
+}
+
 #' Add a Slider to a manipulateWidget gadget
 #'
 #' @param min
@@ -43,16 +63,11 @@
 #' @export
 #' @family controls
 mwSlider <- function(min, max, value, label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    tags$div(
-      style = "padding:0 5px;",
-      sliderInput(id, label, min, max, value, width = width, ...)
-    )
-  }
-
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "slider",
+    function(...) {tags$div(style = "padding:0 5px;", sliderInput(...))},
+    list(min = min, max = max, value = value, label = label, ...)
+  )
 }
 
 #' Add a text input to a manipulateWidget gadget
@@ -80,12 +95,10 @@ mwSlider <- function(min, max, value, label = NULL, ...) {
 #' @export
 #' @family controls
 mwText <- function(value = "", label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    textInput(id, label, value, width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "text", textInput,
+    list(value = value, label = label, ...)
+  )
 }
 
 #' Add a numeric input to a manipulateWidget gadget
@@ -114,12 +127,10 @@ mwText <- function(value = "", label = NULL, ...) {
 #' @export
 #' @family controls
 mwNumeric <- function(value, label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    numericInput(id, label, value, width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "numeric", numericInput,
+    list(value = value, label = label, ...)
+  )
 }
 
 #' Add a password to a manipulateWidget gadget
@@ -152,12 +163,10 @@ mwNumeric <- function(value, label = NULL, ...) {
 #' @export
 #' @family controls
 mwPassword <- function(value = "", label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    passwordInput(id, label, value, width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "password", passwordInput,
+    list(value = value, label = label, ...)
+  )
 }
 
 #' Add a Select list input to a manipulateWidget gadget
@@ -205,17 +214,12 @@ mwPassword <- function(value = "", label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwSelect <- function(choices, value = NULL, label = NULL, ..., multiple = FALSE) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    selectInput(id, label, choices, value, width = width, ..., multiple = multiple)
-  }
-  if (is.null(value)) {
-    value <- if (multiple) character(0) else choices[1]
-  }
-  attr(res, "value") <- value
-  attr(res, "type") <- "select"
-  res
+mwSelect <- function(choices = value, value = NULL, label = NULL, ..., multiple = FALSE) {
+  mwControlFactory(
+    "select", selectizeInput,
+    list(choices = choices, value = value, label = label, ..., multiple = multiple),
+    valueVar = "selected"
+  )
 }
 
 #' Add a checkbox to a manipulateWidget gadget
@@ -245,12 +249,10 @@ mwSelect <- function(choices, value = NULL, label = NULL, ..., multiple = FALSE)
 #' @export
 #' @family controls
 mwCheckbox <- function(value = FALSE, label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    checkboxInput(id, label, value, width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "checkbox", checkboxInput,
+    list(value = value, label = label, ...)
+  )
 }
 
 #' Add radio buttons to a manipulateWidget gadget
@@ -283,13 +285,11 @@ mwCheckbox <- function(value = FALSE, label = NULL, ...) {
 #' @export
 #' @family controls
 mwRadio <- function(choices, value = NULL, label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    radioButtons(id, label, choices, value, width = width, ...)
-  }
-  if (is.null(value)) value <- choices[1]
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "radio", radioButtons,
+    list(choices = choices, value = value, label = label, ...),
+    valueVar = "selected"
+  )
 }
 
 #' Add a date picker to a manipulateWidget gadget
@@ -317,12 +317,10 @@ mwRadio <- function(choices, value = NULL, label = NULL, ...) {
 #' @export
 #' @family controls
 mwDate <- function(value = NULL, label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    dateInput(id, label, value, width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "date", dateInput,
+    list(value = value, label = label, ...)
+  )
 }
 
 #' Add a date range picker to a manipulateWidget gadget
@@ -351,12 +349,11 @@ mwDate <- function(value = NULL, label = NULL, ...) {
 #' @export
 #' @family controls
 mwDateRange <- function(value = c(Sys.Date(), Sys.Date() + 1), label = NULL, ...) {
-  res <- function(id, width) {
-    if (is.null(label)) label <- id
-    dateRangeInput(id, label, start = value[1], end = value[2], width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "dateRange", dateRangeInput,
+    list(value = value, label = label, ...),
+    valueVar = c("start", "end")
+  )
 }
 
 #' Add a group of checkboxes to a manipulateWidget gadget
@@ -390,11 +387,10 @@ mwDateRange <- function(value = c(Sys.Date(), Sys.Date() + 1), label = NULL, ...
 #' @export
 #' @family controls
 mwCheckboxGroup <- function(choices, value = c(), label = NULL, ...) {
-  res <-function(id, width) {
-    if (is.null(label)) label <- id
-    checkboxGroupInput(id, label, choices, value, width = width, ...)
-  }
-  attr(res, "value") <- value
-  res
+  mwControlFactory(
+    "checkboxGroup", checkboxGroupInput,
+    list(choices = choices, value = value, label = label, ...),
+    valueVar = "selected"
+  )
 }
 

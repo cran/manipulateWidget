@@ -4,24 +4,19 @@
 \alias{mwControlsUI}
 \title{Generate controls UI of a manipulateWidget gadget}
 \usage{
-mwControlsUI(..., .dir = c("v", "h"), .n = 1, .updateBtn = FALSE)
+mwControlsUI(controlList, .dir = c("v", "h"), .n = 1, .updateBtn = FALSE)
 }
 \arguments{
-\item{...}{One or more named control arguments created with functions
-\code{\link{mwSlider}}, \code{\link{mwText}}, etc. The name of each control
-is the name of the variable the controls modifies in the expression. One
-can also create a group of inputs by passing a list of such control
-arguments. for instance
-\code{mygroup = list(txt = mwText(""), nb = mwNumeric(0))} creates a group
-of inputs named mygroup with two inputs named "txt" and "nb".}
+\item{controlList}{List of input controls.}
 
 \item{.dir}{In which direction should the controls be positioned ? "v" for vertical
 and "h" for horizontal.}
 
 \item{.n}{Number of columns if \code{.dir == "v"} else number of lines.}
 
-\item{.updateBtn}{Should an update button be added to the controls ? If \code{TRUE}, then
-the graphic is updated only when the user clicks on the update button.}
+\item{.updateBtn}{Should an update button be added to the controls ? If
+\code{TRUE}, then the graphic is updated only when the user clicks on the
+update button.}
 }
 \value{
 A \code{shiny.tag.list} that can be used to construct a UI for a shiny

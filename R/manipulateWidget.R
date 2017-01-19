@@ -12,44 +12,56 @@
 #' the function returns the last displayed plot so the user can modify it and/or
 #' save it.
 #'
-#' @param .expr
-#'   expression to evaluate that returns an interactive plot of class
+#' @param .expr expression to evaluate that returns an interactive plot of class
 #'   \code{htmlwidget}. This expression is re-evaluated each time a control is
 #'   modified.
-#' @param ...
-#'   One or more named control arguments created with functions
+#' @param ... One or more named control arguments created with functions
 #'   \code{\link{mwSlider}}, \code{\link{mwText}}, etc. The name of each control
 #'   is the name of the variable the controls modifies in the expression. One
 #'   can also create a group of inputs by passing a list of such control
-#'   arguments. for instance
-#'   \code{mygroup = list(txt = mwText(""), nb = mwNumeric(0))} creates a group
-#'   of inputs named mygroup with two inputs named "txt" and "nb".
-#' @param .main
-#'   Title of the shiny gadget
-#' @param .updateBtn
-#'   Should an update button be added to the controls ? If \code{TRUE}, then
-#'   the graphic is updated only when the user clicks on the update button.
-#' @param .controlPos
-#'   Where controls should be placed ? By default, they are placed in the left,
-#'   next to the graphic. If \code{controlPos = "tab"}, two tabs are created:
-#'   one containing controls and the other containing the graphic.
-#' @param .tabColumns
-#'   If controls are placed in a distinct tab, how many columns should be
-#'   used ? This parameter is used only if \code{controlPos = "tab"}
-#' @param .viewer
-#'   Controls where the gadget should be displayed. \code{"pane"} corresponds to
-#'   the Rstudio viewer, \code{"window"} to a dialog window, and \code{"browser"}
-#'   to an external web browser.
-#' @param .display
-#'   A named list of conditions that evaluate to TRUE OR FALSE indicating when
-#'   inputs should be displayed. These conditions are reevaluated each time a
-#'   control it modified. By default, each control is displayed, but if the name
-#'   of a control appears in this list, then the associated condition is
-#'   evaluated. If the result is TRUE then the control is visible, else it is
-#'   hidden.
+#'   arguments. for instance \code{mygroup = list(txt = mwText(""), nb =
+#'   mwNumeric(0))} creates a group of inputs named mygroup with two inputs
+#'   named "txt" and "nb".
+#' @param .main Title of the shiny gadget
+#' @param .updateBtn Should an update button be added to the controls ? If
+#'   \code{TRUE}, then the graphic is updated only when the user clicks on the
+#'   update button.
+#' @param .controlPos Where controls should be placed ? By default, they are
+#'   placed in the left, next to the graphic. If \code{controlPos = "tab"}, two
+#'   tabs are created: one containing controls and the other containing the
+#'   graphic.
+#' @param .tabColumns If controls are placed in a distinct tab, how many columns
+#'   should be used ? This parameter is used only if \code{controlPos = "tab"}
+#' @param .viewer Controls where the gadget should be displayed. \code{"pane"}
+#'   corresponds to the Rstudio viewer, \code{"window"} to a dialog window, and
+#'   \code{"browser"} to an external web browser.
+#' @param .display A named list of conditions that evaluate to TRUE OR FALSE
+#'   indicating when inputs should be displayed. These conditions are
+#'   reevaluated each time a control it modified. By default, each control is
+#'   displayed, but if the name of a control appears in this list, then the
+#'   associated condition is evaluated. If the result is TRUE then the control
+#'   is visible, else it is hidden.
+#' @param .updateInputs This parameter is similar to `.display` and can be used
+#'  to dynamically update input controls. It must be a named list where names
+#'  correspond to names of input controls and values are named lists of
+#'  expressions where names correspond to arguments of the input generator
+#'  function.
+#' @param .compare Sometimes one wants to compare the same chart but with two
+#'   different sets of parameters. This is the purpose of this argument. It must
+#'   be a named list whose names are the names of the inputs that should vary
+#'   between the two charts. All other parameters are common to the two charts
+#'   and changing their values will change the two charts. Each element of the
+#'   list must be a vector or a list of length 2 with the initial values of the
+#'   corresponding parameter for each chart. It can also be \code{NULL}. In this
+#'   case, the parameter is initialized with the default value for the two
+#'   charts.
+#' @param .compareLayout Used only when \code{.compare} is set. Possible values
+#'   are "v" for vertical layout (one chart above the other) and "h" for
+#'   horizontal layout (one chart on the right of the other)
+#'
 #'
 #' @return
-#' The result of the expression evaluated with the last values of the control.
+#' The result of the expression evaluated with the last values of the controls.
 #' It should be an object of class \code{htmlWidget}.
 #'
 #' @section Advanced Usage:
@@ -61,7 +73,7 @@
 #' Some packages provide functions to update a widget that has already been
 #' rendered. This is the case for instance for package \code{leaflet} with the
 #' function \code{\link[leaflet]{leafletProxy}}. To use such functions,
-#' \code{manipulateWidget} evaluates the parameter \code{.expr} with two extra
+#' \code{manipulateWidget} evaluates the parameter \code{.expr} with four extra
 #' variables:
 #'
 #' \itemize{
@@ -73,9 +85,14 @@
 #'   \item{\code{.session}:}{
 #'     A shiny session object.
 #'   }
+#'   \item{\code{.output}:}{
+#'     ID of the output in the shiny interface.
+#'   }
+#'   \item{\code{.id}:}{
+#'     Id of the chart. It can be used in comparison mode to make further
+#'     customization without the need to create additional input controls.
+#'   }
 #' }
-#'
-#' Moreover the ID of the rendered widget will always be "output".
 #'
 #' You can take a look at the last example to see how to use these two
 #' variables to update a leaflet widget.
@@ -88,6 +105,27 @@
 #'                    range = mwSlider(2001, 2100, c(2001, 2100)),
 #'                    title = mwText("Fictive time series"))
 #'
+#' }
+#'
+#' # Comparison mode
+#' if (require(dygraphs)) {
+#'
+#'   mydata <- data.frame(
+#'     year = 2000+1:100,
+#'     series1 = rnorm(100),
+#'     series2 = rnorm(100),
+#'     series3 = rnorm(100)
+#'   )
+#'   manipulateWidget(
+#'     dygraph(mydata[range[1]:range[2] - 2000, c("year", series)], main = title),
+#'     range = mwSlider(2001, 2100, c(2001, 2100)),
+#'     series = mwSelect(c("series1", "series2", "series3")),
+#'     title = mwText("Fictive time series"),
+#'     .compare = list(
+#'       title = list("First chart", "Second chart"),
+#'       series = NULL
+#'     )
+#'   )
 #' }
 #'
 #' # Grouping inputs
@@ -148,19 +186,19 @@
 #'   lon <- rnorm(10, sd = 20)
 #'   lat <- rnorm(10, sd = 20)
 #'
-#'   myMapFun <- function(radius, color, initial, session) {
+#'   myMapFun <- function(radius, color, initial, session, output) {
 #'     if (initial) {
 #'       # Widget has not been rendered
 #'       map <- leaflet() %>% addTiles()
 #'     } else {
 #'       # widget has already been rendered
-#'       map <- leafletProxy("output", session) %>% clearMarkers()
+#'       map <- leafletProxy(output, session) %>% clearMarkers()
 #'     }
 #'
 #'     map %>% addCircleMarkers(lon, lat, radius = radius, color = color)
 #'   }
 #'
-#'   manipulateWidget(myMapFun(radius, color, .initial, .session),
+#'   manipulateWidget(myMapFun(radius, color, .initial, .session, .output),
 #'                    radius = mwSlider(5, 30, 10),
 #'                    color = mwSelect(c("red", "blue", "green")))
 #'
@@ -172,12 +210,22 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
                              .controlPos = c("left", "top", "right", "bottom", "tab"),
                              .tabColumns = 2,
                              .viewer = c("pane", "window", "browser"),
-                             .display = NULL) {
+                             .display = NULL,
+                             .updateInputs = NULL,
+                             .compare = NULL,
+                             .compareLayout = c("v", "h")) {
+
+  # check if we are in runtime shiny
+  isRuntimeShiny <- identical(knitr::opts_knit$get("rmarkdown.runtime"), "shiny")
+
   .expr <- substitute(.expr)
   .display <- substitute(.display)
+  .updateInputs <- substitute(.updateInputs)
   .viewer <- match.arg(.viewer)
   .controlPos <- match.arg(.controlPos)
+  .compareLayout <- match.arg(.compareLayout)
   .env <- parent.frame()
+  compareMode <- !is.null(.compare)
 
   if (.controlPos == "tab") .updateBtn <- FALSE
 
@@ -192,30 +240,43 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
   }
 
   # Evaluate a first time .expr to determine the class of the output
-  initValues <- list()
-  selectInputList <- c()
-  .getInitValues <- function(x, name = "") {
-    if (is.function(x)) {
-      input <- list(attr(x, "value"))
-      names(input) <- name
-      initValues <<- append(initValues, input)
+  controls <- comparisonControls(list(...), .compare, .updateInputs)
+  controlDesc <- getControlDesc(controls[c("common", "ind")])
 
-      if (!is.null(attr(x, "type")) && attr(x, "type") == "select") {
-        selectInputList <<- append(selectInputList, name)
-      }
-    }
-    else mapply(.getInitValues, x=x, name = names(x))
-  }
-  .getInitValues(list(...))
+  initValues <- controlDesc$initValue
+  names(initValues) <- controlDesc$name
 
-  # Add a parameter indicating this is the first evaluation of
+  selectInputList <- controlDesc$name[controlDesc$type == "select"]
+
+  # Add a parameter indicating this is the first evaluation of .expr
   initValues$.initial <- TRUE
   initValues$.session <- NULL
+  initValues$.output <- "output"
+  initValues$.id <- 1
 
   initWidget <- eval(.expr, envir = list2env(initValues, parent = .env))
 
-  # Stop here if R session is not in interactive mode.
-  if (!interactive()) return(initWidget)
+  if (compareMode) {
+    controlDesc2 <- getControlDesc(controls[c("common", "ind2")])
+    initValues2 <- controlDesc2$initValue
+    names(initValues2) <- controlDesc$name
+    initValues2$.initial <- TRUE
+    initValues2$.session <- NULL
+    initValues2$.output <- "output2"
+    initValues2$.id <- 2
+
+    for (v in names(.compare)) {
+      if (!is.null(.compare[[v]])) {
+        initValues[[v]] <- .compare[[v]][[1]]
+        initValues2[[v]] <- .compare[[v]][[2]]
+      }
+    }
+
+    initWidget2 <- eval(.expr, envir = list2env(initValues2, parent = .env))
+  } else {
+    initWidget2 = NULL
+    initValues2 <- NULL
+  }
 
   # Get shiny output and render functions
   if (is(initWidget, "htmlwidget")) {
@@ -227,11 +288,9 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
 
     OutputFunName <- ls(getNamespace(pkg), pattern = "Output$")
     outputFunction <- getFromNamespace(OutputFunName, pkg)
-    outputArgs <- list(outputId = "output", height="100%")
   } else {
     renderFunction <- renderUI
-    outputFunction <- htmlOutput
-    outputArgs <- list(outputId = "output", style="width:100%;height:100%")
+    outputFunction <- NULL
   }
 
   # UI
@@ -241,72 +300,34 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
     .tabColumns = .tabColumns,
     .updateBtn = .updateBtn,
     .main = .main,
-    .content = do.call(outputFunction, outputArgs)
+    .outputFun = outputFunction,
+    .titleBar = !isRuntimeShiny,
+    .updateInputs = .updateInputs,
+    .compare = .compare,
+    .compareLayout = .compareLayout
   )
 
-  controlNames <- .getControlNames(ui)
+  server <- mwServer(.expr, initWidget, initWidget2,
+                     initValues, initValues2,
+                     renderFunction,
+                     controlDesc, .display, .updateInputs,
+                     .compare, .compareLayout,
+                     .updateBtn, .env)
 
-  server <- function(input, output, session) {
-    # Initialize the widget with its first evaluation
-    output$output <- renderFunction(initWidget)
-
-    # Ensure that initial values of select inputs with multiple = TRUE are in
-    # same order than the user asked.
-    for (v in selectInputList) {
-      shiny::updateSelectInput(session, v, selected = initValues[[v]])
-    }
-
-    inputList <- reactive({
-      input$.update
-
-      res <- lapply(controlNames, function(s) {
-        if (.updateBtn) eval(parse(text = sprintf("isolate(input$%s)", s)))
-        else eval(parse(text = sprintf("input$%s", s)))
-      })
-      names(res) <- controlNames
-
-      res
-    })
-
-    observe({
-      # get input current values
-      inputValues <- inputList()
-      # Add parameters indicating the widget already exists
-      inputValues$.initial <- FALSE
-      inputValues$.session <- session
-
-      inputEnv <- list2env(inputValues, parent = .env)
-
-      # Update the interface if parameter .display is set
-      .displayBool <- eval(.display, envir = inputEnv)
-      for (id in names(.displayBool)) {
-        updateCheckboxInput(session, inputId = paste0(id, "_visible"),
-                            value = .displayBool[[id]])
-      }
-
-      # Output or update the widget
-      res <- eval(.expr, envir = inputEnv)
-      if (is(res, "htmlwidget")) {
-        output$output <- renderFunction(res)
-      }
-    })
-
-    observeEvent(input$done, {
-      inputValues <- inputList()
-      inputValues$.initial <- TRUE
-      inputValues$.session <- NULL
-      inputEnv <- list2env(inputValues, parent = .env)
-
-      stopApp(eval(.expr, envir = inputEnv))
-    })
+  if (interactive()) {
+    # We are in an interactive session so we start a shiny gadget
+    .viewer <- switch(.viewer,
+      pane = paneViewer(),
+      window = dialogViewer(.main),
+      browser = browserViewer()
+    )
+    runGadget(ui, server, viewer = .viewer)
+  } else if (isRuntimeShiny) {
+    # We are in Rmarkdown document with shiny runtime. So we start a shiny app
+    shinyApp(ui = ui, server = server)
+  } else {
+    # Other cases (Rmarkdown or non interactive execution). We return the initial
+    # widget to not block the R execution.
+    initWidget
   }
-
-  .viewer <- switch(.viewer,
-    pane = paneViewer(),
-    window = dialogViewer(.main),
-    browser = browserViewer()
-  )
-
-  runGadget(ui, server, viewer = .viewer)
-
 }

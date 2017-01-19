@@ -2,6 +2,31 @@
 knitr::opts_chunk$set(echo = TRUE)
 library(manipulateWidget)
 
+## ----kmeans, message=FALSE-----------------------------------------------
+library(plotly)
+data(iris)
+
+plotClusters <- function(xvar, yvar, nclusters) {
+  clusters <- kmeans(iris[, 1:4], centers = nclusters)
+  clusters <- paste("Cluster", clusters$cluster)
+  
+  plot_ly(x = ~iris[[xvar]], y = ~iris[[yvar]], color = ~clusters,
+          type = "scatter", mode = "markers") %>% 
+    layout(xaxis = list(title=xvar), yaxis = list(title=yvar))
+}
+
+# plotClusters("Sepal.Width", "Sepal.Length", 3)
+
+## ----eval = FALSE--------------------------------------------------------
+#  varNames <- names(iris)[1:4]
+#  
+#  manipulateWidget(
+#    plotClusters(xvar, yvar, nclusters),
+#    xvar = mwSelect(varNames),
+#    yvar = mwSelect(varNames, value = "Sepal.Width"),
+#    nclusters = mwSlider(1, 10, value = 3)
+#  )
+
 ## ----eval=FALSE----------------------------------------------------------
 #  manipulateWidget(
 #    myPlotFun(country),
@@ -105,6 +130,24 @@ combineWidgets(
 #                   radius = mwSlider(5, 30, 10),
 #                   color = mwSelect(c("red", "blue", "green")))
 #  
+
+## ----eval=FALSE----------------------------------------------------------
+#  mydata <- data.frame(
+#    timeId = 1:100,
+#    series1 = rnorm(100),
+#    series2 = rnorm(100),
+#    series3 = rnorm(100)
+#  )
+#  manipulateWidget(
+#    dygraph(mydata[range[1]:range[2], c("timeId", series)], main = title),
+#    range = mwSlider(1, 100, c(1, 100)),
+#    series = mwSelect(c("series1", "series2", "series3")),
+#    title = mwText(),
+#    .compare = list(
+#      title = list("First chart", "Second chart"),
+#      series = NULL
+#    )
+#  )
 
 ## ----eval = FALSE--------------------------------------------------------
 #  myPlotFun <- function(distribution, range, title) {
