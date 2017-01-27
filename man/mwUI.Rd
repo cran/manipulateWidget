@@ -8,7 +8,8 @@ mwUI(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
   .tabColumns = 2, .updateBtn = FALSE, .main = "", .outputFun = NULL,
   .outputId = "output", .titleBar = TRUE, .updateInputs = NULL,
   .compare = NULL, .compareLayout = c("v", "h"), .controlList = NULL,
-  .container = miniUI::miniContentPanel, .style = "")
+  .container = miniUI::miniContentPanel, .style = "",
+  .env = parent.frame())
 }
 \arguments{
 \item{...}{One or more named control arguments created with functions
@@ -65,6 +66,10 @@ specifying directly the controls through the \code{...} arguments.}
 \item{.container}{tag function that will be used to enclose the UI.}
 
 \item{.style}{CSS style to apply to the container element.}
+
+\item{.env}{Environment used to evaluate the inital values of controls. This
+parameter may have an impact on the result only when \code{.updateInputs}
+is used.}
 }
 \value{
 A \code{shiny.tag.list} object that can be used in function

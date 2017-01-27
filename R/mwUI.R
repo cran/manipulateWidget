@@ -12,6 +12,9 @@
 #'   specifying directly the controls through the \code{...} arguments.
 #' @param .container tag function that will be used to enclose the UI.
 #' @param .style CSS style to apply to the container element.
+#' @param .env Environment used to evaluate the inital values of controls. This
+#'   parameter may have an impact on the result only when \code{.updateInputs}
+#'   is used.
 #' @inheritParams manipulateWidget
 #'
 #' @return
@@ -25,18 +28,18 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
                  .outputFun = NULL, .outputId = "output",
                  .titleBar = TRUE, .updateInputs = NULL, .compare = NULL, .compareLayout = c("v", "h"),
                  .controlList = NULL, .container = miniUI::miniContentPanel,
-                 .style = "") {
+                 .style = "", .env = parent.frame()) {
 
   .controlPos <- match.arg(.controlPos)
   .compareLayout <- match.arg(.compareLayout)
   controls <- append(list(...), .controlList)
 
-  controls <- comparisonControls(controls, .compare, .updateInputs)
+  controls <- comparisonControls(controls, .compare, .updateInputs, env = .env)
   commonControls <- controls$common
 
   if (is.null(.compare)) {
     if(is.null(.outputFun)) {
-      .content <- htmlOutput(.outputId, style = "height:100%;width:100%")
+      .content <- shiny::htmlOutput(.outputId, style = "height:100%;width:100%")
     } else {
       .content <- .outputFun(.outputId, width = "100%", height = "100%")
     }
@@ -44,24 +47,24 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
 
 
     if (.compareLayout == "v") {
-      .content <- fillCol(
+      .content <- shiny:: fillCol(
         mwUI(.controlList = controls$ind, .outputFun = .outputFun,
-             .outputId = .outputId, .titleBar = FALSE, .container=fillRow,
+             .outputId = .outputId, .titleBar = FALSE, .container=shiny:: fillRow,
              .style = "margin-left:5px; padding: 0 0 5px 5px;border-left: solid 1px #ddd;"),
         mwUI(.controlList = controls$ind2, .outputFun = .outputFun,
              .outputId = paste0(.outputId, "2"), .titleBar = FALSE,
-             .container=fillRow,
+             .container=shiny:: fillRow,
              .style = "margin-left:5px; padding: 5px 0 0 5px;border-left: solid 1px #ddd;")
       )
     } else {
-      .content <- fillRow(
+      .content <- shiny:: fillRow(
         mwUI(.controlList = controls$ind, .outputFun = .outputFun,
              .outputId = .outputId, .titleBar = FALSE, .controlPos = "top",
-             .container=fillRow,
+             .container=shiny:: fillRow,
              .style = "margin-left:5px;padding-left:5px;border-left: solid 1px #ddd;"),
         mwUI(.controlList = controls$ind2, .outputFun = .outputFun,
              .outputId = paste0(.outputId, "2"), .titleBar = FALSE, .controlPos = "top",
-             .container = fillRow, .style = "padding-left:5px;")
+             .container = shiny:: fillRow, .style = "padding-left:5px;")
       )
     }
 
@@ -76,12 +79,12 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
     ctrls <- mwControlsUI(commonControls, .dir = "v", .n = .tabColumns,
                           .updateBtn = .updateBtn)
     ui <- miniTabstripPanel(
-      miniTabPanel("Parameters", icon = icon("sliders"),
+      miniTabPanel("Parameters", icon = shiny::icon("sliders"),
         miniContentPanel(
           ctrls
         )
       ),
-      miniTabPanel("Plot", icon = icon("area-chart"),
+      miniTabPanel("Plot", icon = shiny::icon("area-chart"),
         miniContentPanel(
          .content
         )
@@ -92,7 +95,7 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
     ctrls <- mwControlsUI(commonControls, .dir = "v", .updateBtn = .updateBtn)
     ui <- .container(
       style = .style,
-      fillRow(flex = c(NA, 1),
+      shiny:: fillRow(flex = c(NA, 1),
               tags$div(style ="width:200px;height:100%;overflow-y:auto;", ctrls),
               .content
       )
@@ -102,7 +105,7 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
     ctrls <- mwControlsUI(commonControls, .dir = "h",.updateBtn = .updateBtn)
     ui <- .container(
       style = .style,
-      fillCol(flex = c(NA, 1),
+      shiny:: fillCol(flex = c(NA, 1),
               ctrls,
               .content
       )
@@ -112,7 +115,7 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
     ctrls <- mwControlsUI(commonControls, .dir = "v", .updateBtn = .updateBtn)
     ui <- .container(
       style = .style,
-      fillRow(flex = c(1, NA),
+      shiny:: fillRow(flex = c(1, NA),
               .content,
               tags$div(style ="width:200px;height:100%;overflow-y:auto;", ctrls)
       )
@@ -122,7 +125,7 @@ mwUI <- function(..., .controlPos = c("left", "top", "right", "bottom", "tab"),
     ctrls <- mwControlsUI(commonControls, .dir = "h", .updateBtn = .updateBtn)
     ui <- .container(
       style = .style,
-      fillCol(flex = c(1, NA),
+      shiny:: fillCol(flex = c(1, NA),
               .content,
               ctrls
       )

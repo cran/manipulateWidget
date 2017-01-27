@@ -59,7 +59,6 @@
 #'   are "v" for vertical layout (one chart above the other) and "h" for
 #'   horizontal layout (one chart on the right of the other)
 #'
-#'
 #' @return
 #' The result of the expression evaluated with the last values of the controls.
 #' It should be an object of class \code{htmlWidget}.
@@ -240,7 +239,7 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
   }
 
   # Evaluate a first time .expr to determine the class of the output
-  controls <- comparisonControls(list(...), .compare, .updateInputs)
+  controls <- comparisonControls(list(...), .compare, .updateInputs, env = .env)
   controlDesc <- getControlDesc(controls[c("common", "ind")])
 
   initValues <- controlDesc$initValue
@@ -289,7 +288,7 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
     OutputFunName <- ls(getNamespace(pkg), pattern = "Output$")
     outputFunction <- getFromNamespace(OutputFunName, pkg)
   } else {
-    renderFunction <- renderUI
+    renderFunction <- shiny::renderUI
     outputFunction <- NULL
   }
 
@@ -304,7 +303,8 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
     .titleBar = !isRuntimeShiny,
     .updateInputs = .updateInputs,
     .compare = .compare,
-    .compareLayout = .compareLayout
+    .compareLayout = .compareLayout,
+    .env = .env
   )
 
   server <- mwServer(.expr, initWidget, initWidget2,
@@ -317,14 +317,14 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
   if (interactive()) {
     # We are in an interactive session so we start a shiny gadget
     .viewer <- switch(.viewer,
-      pane = paneViewer(),
-      window = dialogViewer(.main),
-      browser = browserViewer()
+      pane = shiny::paneViewer(),
+      window = shiny::dialogViewer(.main),
+      browser = shiny::browserViewer()
     )
-    runGadget(ui, server, viewer = .viewer)
+    shiny::runGadget(ui, server, viewer = .viewer)
   } else if (isRuntimeShiny) {
     # We are in Rmarkdown document with shiny runtime. So we start a shiny app
-    shinyApp(ui = ui, server = server)
+    shiny::shinyApp(ui = ui, server = server)
   } else {
     # Other cases (Rmarkdown or non interactive execution). We return the initial
     # widget to not block the R execution.
