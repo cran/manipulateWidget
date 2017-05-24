@@ -4,7 +4,7 @@
 \alias{mwPassword}
 \title{Add a password to a manipulateWidget gadget}
 \usage{
-mwPassword(value = "", label = NULL, ...)
+mwPassword(value = "", label = NULL, ..., .display = TRUE)
 }
 \arguments{
 \item{value}{Default value of the input.}
@@ -13,6 +13,9 @@ mwPassword(value = "", label = NULL, ...)
 variable is used.}
 
 \item{...}{Other arguments passed to function\code{\link[shiny]{passwordInput}}}
+
+\item{.display}{expression that evaluates to TRUE or FALSE, indicating when
+the input control should be shown/hidden.}
 }
 \value{
 A function that will generate the input control.
@@ -40,8 +43,8 @@ if (require(plotly)) {
 \seealso{
 Other controls: \code{\link{mwCheckboxGroup}},
   \code{\link{mwCheckbox}}, \code{\link{mwDateRange}},
-  \code{\link{mwDate}}, \code{\link{mwNumeric}},
-  \code{\link{mwRadio}}, \code{\link{mwSelect}},
-  \code{\link{mwSlider}}, \code{\link{mwText}}
+  \code{\link{mwDate}}, \code{\link{mwGroup}},
+  \code{\link{mwNumeric}}, \code{\link{mwRadio}},
+  \code{\link{mwSelect}}, \code{\link{mwSlider}},
+  \code{\link{mwText}}
 }
-

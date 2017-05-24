@@ -35,17 +35,6 @@
 #' @param .viewer Controls where the gadget should be displayed. \code{"pane"}
 #'   corresponds to the Rstudio viewer, \code{"window"} to a dialog window, and
 #'   \code{"browser"} to an external web browser.
-#' @param .display A named list of conditions that evaluate to TRUE OR FALSE
-#'   indicating when inputs should be displayed. These conditions are
-#'   reevaluated each time a control it modified. By default, each control is
-#'   displayed, but if the name of a control appears in this list, then the
-#'   associated condition is evaluated. If the result is TRUE then the control
-#'   is visible, else it is hidden.
-#' @param .updateInputs This parameter is similar to `.display` and can be used
-#'  to dynamically update input controls. It must be a named list where names
-#'  correspond to names of input controls and values are named lists of
-#'  expressions where names correspond to arguments of the input generator
-#'  function.
 #' @param .compare Sometimes one wants to compare the same chart but with two
 #'   different sets of parameters. This is the purpose of this argument. It must
 #'   be a named list whose names are the names of the inputs that should vary
@@ -57,7 +46,16 @@
 #'   charts.
 #' @param .compareLayout Used only when \code{.compare} is set. Possible values
 #'   are "v" for vertical layout (one chart above the other) and "h" for
-#'   horizontal layout (one chart on the right of the other)
+#'   horizontal layout (one chart on the right of the other).
+#' @param .return A function that can be used to modify the output of
+#'   \code{manipulateWidget}. It must take two parameters: the first one is the
+#'   final widget, the second one is a list of environments containing the input
+#'   values of each individual widget. The length of this list is one if .compare
+#'   is null, two or more if it has been defined.
+#' @param .width Width of the UI. Used only on Rmarkdown documents with option
+#'   \code{runtime: shiny}.
+#' @param .height Height of the UI. Used only on Rmarkdown documents with option
+#'   \code{runtime: shiny}.
 #'
 #' @return
 #' The result of the expression evaluated with the last values of the controls.
@@ -95,6 +93,15 @@
 #'
 #' You can take a look at the last example to see how to use these two
 #' variables to update a leaflet widget.
+#'
+#' @section Modify the returned widget:
+#'   In some specific situations, a developer may want to use
+#'   \code{manipulateWidget} in a function that waits the user to click on the
+#'   "Done" button and modifies the widget returned by \code{manipulateWidget}.
+#'   In such situation, parameter \code{.return} should be used so that
+#'   \code{manipulateWidget} is the last function called. Indeed, if other code
+#'   is present after, the custom function will act very weird in a Rmarkdown
+#'   document with "runtime: shiny".
 #'
 #' @examples
 #' if (require(dygraphs)) {
@@ -166,17 +173,16 @@
 #'   manipulateWidget(
 #'     myPlot(type, lwd),
 #'     type = mwSelect(c("points", "lines"), "points"),
-#'     lwd = mwSlider(1, 10, 1),
-#'     .display = list(lwd = type == "lines")
+#'     lwd = mwSlider(1, 10, 1, .display = type == "lines")
 #'   )
 #'
 #' }
 #'
 #' # Advanced Usage
 #' #
-#' # .expr is evaluated with two extra variables .initial and .session that can
-#' # be used to update an already rendered widget instead of replacing it each
-#' # time an input value is modified.
+#' # .expr is evaluated with extra variables .initial, .outputId and .session
+#' # that can be used to update an already rendered widget instead of replacing
+#' # it each time an input value is modified.
 #' #
 #' # Here we generate a UI that permits to change color and size of arbitrary
 #' # points on a map generated with leaflet.
@@ -209,16 +215,15 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
                              .controlPos = c("left", "top", "right", "bottom", "tab"),
                              .tabColumns = 2,
                              .viewer = c("pane", "window", "browser"),
-                             .display = NULL,
-                             .updateInputs = NULL,
                              .compare = NULL,
-                             .compareLayout = c("v", "h")) {
+                             .compareLayout = c("v", "h"),
+                             .return = function(widget, envs) {widget},
+                             .width = NULL, .height = NULL) {
 
   # check if we are in runtime shiny
   isRuntimeShiny <- identical(knitr::opts_knit$get("rmarkdown.runtime"), "shiny")
 
   .expr <- substitute(.expr)
-  .display <- substitute(.display)
   .updateInputs <- substitute(.updateInputs)
   .viewer <- match.arg(.viewer)
   .controlPos <- match.arg(.controlPos)
@@ -239,48 +244,20 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
   }
 
   # Evaluate a first time .expr to determine the class of the output
-  controls <- comparisonControls(list(...), .compare, .updateInputs, env = .env)
+  controls <- preprocessControls(list(...), .compare, .updateInputs, env = .env)
+
+  initWidgets <- lapply(controls$env$ind, function(e) {
+    eval(.expr, envir = e)
+  })
+
   controlDesc <- getControlDesc(controls[c("common", "ind")])
 
-  initValues <- controlDesc$initValue
-  names(initValues) <- controlDesc$name
 
-  selectInputList <- controlDesc$name[controlDesc$type == "select"]
-
-  # Add a parameter indicating this is the first evaluation of .expr
-  initValues$.initial <- TRUE
-  initValues$.session <- NULL
-  initValues$.output <- "output"
-  initValues$.id <- 1
-
-  initWidget <- eval(.expr, envir = list2env(initValues, parent = .env))
-
-  if (compareMode) {
-    controlDesc2 <- getControlDesc(controls[c("common", "ind2")])
-    initValues2 <- controlDesc2$initValue
-    names(initValues2) <- controlDesc$name
-    initValues2$.initial <- TRUE
-    initValues2$.session <- NULL
-    initValues2$.output <- "output2"
-    initValues2$.id <- 2
-
-    for (v in names(.compare)) {
-      if (!is.null(.compare[[v]])) {
-        initValues[[v]] <- .compare[[v]][[1]]
-        initValues2[[v]] <- .compare[[v]][[2]]
-      }
-    }
-
-    initWidget2 <- eval(.expr, envir = list2env(initValues2, parent = .env))
-  } else {
-    initWidget2 = NULL
-    initValues2 <- NULL
-  }
 
   # Get shiny output and render functions
-  if (is(initWidget, "htmlwidget")) {
-    cl <- class(initWidget)[1]
-    pkg <- attr(initWidget, "package")
+  if (is(initWidgets[[1]], "htmlwidget")) {
+    cl <- class(initWidgets[[1]])[1]
+    pkg <- attr(initWidgets[[1]], "package")
 
     renderFunName <- ls(getNamespace(pkg), pattern = "^render")
     renderFunction <- getFromNamespace(renderFunName, pkg)
@@ -294,25 +271,22 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
 
   # UI
   ui <- mwUI(
-    ...,
+    controls$controls,
     .controlPos = .controlPos,
     .tabColumns = .tabColumns,
     .updateBtn = .updateBtn,
     .main = .main,
     .outputFun = outputFunction,
     .titleBar = !isRuntimeShiny,
-    .updateInputs = .updateInputs,
-    .compare = .compare,
     .compareLayout = .compareLayout,
-    .env = .env
+    nmod = controls$nmod
   )
 
-  server <- mwServer(.expr, initWidget, initWidget2,
-                     initValues, initValues2,
+  server <- mwServer(.expr, controls, initWidgets,
                      renderFunction,
-                     controlDesc, .display, .updateInputs,
-                     .compare, .compareLayout,
-                     .updateBtn, .env)
+                     .compareLayout,
+                     .updateBtn,
+                     .return)
 
   if (interactive()) {
     # We are in an interactive session so we start a shiny gadget
@@ -324,10 +298,10 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
     shiny::runGadget(ui, server, viewer = .viewer)
   } else if (isRuntimeShiny) {
     # We are in Rmarkdown document with shiny runtime. So we start a shiny app
-    shiny::shinyApp(ui = ui, server = server)
+    shiny::shinyApp(ui = ui, server = server, options = list(width = .width, height = .height))
   } else {
     # Other cases (Rmarkdown or non interactive execution). We return the initial
     # widget to not block the R execution.
-    initWidget
+    mwReturn(initWidgets, .return, controls$env$ind)
   }
 }

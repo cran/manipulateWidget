@@ -75,10 +75,12 @@
 #'
 #' @rdname manipulateWidget-package
 #' @docType package
-#' @importFrom shiny tags observe observeEvent reactive
+#' @importFrom shiny tags observe observeEvent reactive isolate
 #' @importFrom miniUI miniContentPanel miniPage miniTabPanel miniTabstripPanel gadgetTitleBar
 #' @importFrom htmlwidgets getDependency
 #' @importFrom methods is
 #' @importFrom utils getFromNamespace
 #' @importFrom stats runif
 NULL
+#
+globalVariables(c("mod", "multiple", "name", "type"))

@@ -1,192 +1,76 @@
-mwServer <- function(.expr, initWidget, initWidget2 = NULL,
-                     initValues, initValues2 = NULL,
+#' Private function that returns a shiny server function to use in manipulateWidget
+#'
+#' @param .expr see manipulateWidget
+#' @param controls Object returned by function preprocessControls
+#' @param widgets A list of the widgets to show, in their initial state
+#' @param renderFunction Function to use to render the widgets
+#' @param .display see manipulateWidget
+#' @param .compareLayout see manipulateWidget
+#' @param .updateBtn see manipulateWidget
+#'
+#' @return A server function that can be used in runGadget.
+#'
+#' @noRd
+#'
+mwServer <- function(.expr, controls, widgets,
                      renderFunction,
-                     controlDesc, .display, .updateInputs, .compare, .compareLayout,
-                     .updateBtn,
-                     .env) {
+                     .compareLayout,
+                     .updateBtn, .return) {
 
   function(input, output, session) {
-    compareMode <- !is.null(initWidget2)
-    selectInputList <- controlDesc[controlDesc$type == "select" & controlDesc$multiple, "name"]
-
-    # Since the widget has already been created with the initial values, we want
-    # to skip the first evaluation of the widget by the server function. This is
-    # why we create the following variable.
-    firstEval <- TRUE
-
-    if (compareMode) {
-      controlDesc2 <- controlDesc
-      controlDesc2$name <- ifelse(
-        controlDesc2$name %in% names(.compare),
-        paste0(controlDesc2$name, "2"),
-        controlDesc2$name
-      )
-      selectInputList2 <- controlDesc2[controlDesc2$type == "select" & controlDesc2$multiple, "name"]
-      firstEval2 <- TRUE
-    }
-
-    # Initialize the widget with its first evaluation
-    output$output <- renderFunction(initWidget)
-
     # Ensure that initial values of select inputs with multiple = TRUE are in
     # same order than the user asked.
-    for (v in selectInputList) {
-      shiny::updateSelectInput(session, v, selected = initValues[[v]])
+    selectInputList <- subset(controls$desc, type == "select" & multiple)
+    for (i in seq_len(nrow(selectInputList))) {
+      shiny::updateSelectInput(
+        session,
+        selectInputList$name[i],
+        selected = selectInputList$initValues[[i]]
+      )
     }
 
-    inputList <- reactive({
-      input$.update
+    updateModule <- function(i) {
+      # Initialize the widgets with their first evaluation
+      output[[paste0("output", i)]] <- renderFunction(widgets[[i]])
 
-      res <- lapply(controlDesc$name, function(s) {
-        if (.updateBtn) eval(parse(text = sprintf("isolate(input$%s)", s)))
-        else eval(parse(text = sprintf("input$%s", s)))
-      })
-      names(res) <- controlDesc$name
+      desc <- subset(controls$desc, mod %in% c(0, i))
 
-      res
-    })
-
-    observe({
-      inputEnv <- getInputEnv(inputList(), session, "output", 1, .env)
-      controlDesc <<- updateInputs(session, input, controlDesc, .display,
-                                   .compare, .updateInputs, inputEnv, suffix = "")
-      if (firstEval) {
-        firstEval <<- FALSE
-      } else {
-        outputWidget(.expr, output, renderFunction, inputEnv)
-      }
-    })
-
-    if (compareMode) {
-      # Initialize the widget with its first evaluation
-      output$output2 <- renderFunction(initWidget2)
-
-      inputList2 <- reactive({
+      # Set the reactive environment of the modules. envs[[i]] is a reactive
+      # value containing the module environment.
+      moduleEnv <- reactive({
         input$.update
 
-        res <- lapply(controlDesc2$name, function(s) {
-          if (.updateBtn) eval(parse(text = sprintf("isolate(input$%s)", s)))
-          else eval(parse(text = sprintf("input$%s", s)))
-        })
-        names(res) <- controlDesc$name
-
-        res
-      })
-
-      # Ensure that initial values of select inputs with multiple = TRUE are in
-      # same order than the user asked.
-      for (v in selectInputList) {
-        inputId <- paste0(v, "2")
-        shiny::updateSelectInput(session, inputId, selected = initValues2[[v]])
-      }
-
-      observe({
-        inputEnv <- getInputEnv(inputList2(), session, "output2", 2, .env)
-        controlDesc2 <<- updateInputs(session, input, controlDesc2, .display,
-                                      .compare, .updateInputs, inputEnv, suffix = "2")
-        if (firstEval2) {
-          firstEval2 <<- FALSE
-        } else {
-          outputWidget(.expr, output, renderFunction, inputEnv)
+        for (j in seq_len(nrow(desc))) {
+          if (.updateBtn) v <- isolate(input[[desc$inputId[j]]])
+          else v <- input[[desc$inputId[j]]]
+          assign(desc$name[j], v, envir = desc$env[[j]])
         }
+        controls$env$ind[[i]]
       })
-    }
 
-    observeEvent(input$done, {
-      inputEnv <- getInputEnv(inputList(), NULL, output, 1, .env, TRUE)
+      # Update inputs and widget of the module
+      observe({
+        showHideControls(desc, session, moduleEnv())
 
-      if (!compareMode) {
-        shiny::stopApp(eval(.expr, envir = inputEnv))
-      } else {
-        inputEnv2 <- getInputEnv(inputList2(), NULL, output, 2, .env, TRUE)
-
-        shiny::stopApp(combineWidgets(
-          ncol = ifelse(.compareLayout == "v", 1, 2),
-          eval(.expr, envir = inputEnv),
-          eval(.expr, envir = inputEnv2)
-        ))
-      }
-    })
-  }
-}
-
-getInputEnv <- function(inputValues, session, output, id, env, initial = FALSE) {
-  inputValues$.initial <- initial
-  inputValues$.session <- session
-  inputValues$.output <- output
-  inputValues$.id <- id
-
-  list2env(inputValues, parent = env)
-}
-
-outputWidget <- function(.expr, output, renderFunction, env) {
-  res <- eval(.expr, envir = env)
-  if (is(res, "htmlwidget")) {
-    output[[env$.output]] <- renderFunction(res)
-  }
-}
-
-updateInputs <- function(session, input, controlDesc, .display, .compare, .updateInputs, env, suffix = "") {
-  # Set visibility of inputs when parameter .display is set
-  .displayBool <- eval(.display, envir = env)
-  if (length(.displayBool) > 0) {
-    names(.displayBool) <- ifelse(
-      names(.displayBool) %in% names(.compare),
-      paste0(names(.displayBool), suffix),
-      names(.displayBool)
-    )
-
-    for (id in names(.displayBool)) {
-      shiny::updateCheckboxInput(session, inputId = paste0(id, "_visible"),
-                                 value = .displayBool[[id]])
-    }
-  }
-
-  #Update choices of select inputs if parameter .choices is set
-  newParams <- eval(.updateInputs, envir = env)
-
-  for (n in names(newParams)) {
-    # TODO: in comparison mode, common inputs are updated twice.
-    if (n %in% names(.compare)) inputId <- paste0(n, suffix)
-    else inputId <- n
-    desc <- controlDesc[controlDesc$name == inputId,]
-    updateInputFun <- switch(
-      desc$type,
-      slider = shiny::updateSliderInput,
-      text = shiny::updateTextInput,
-      numeric = shiny::updateNumericInput,
-      password = shiny::updateTextInput,
-      select = shiny::updateSelectizeInput,
-      checkbox = shiny::updateCheckboxInput,
-      radio = shiny::updateRadioButtons,
-      date = shiny::updateDateInput,
-      dateRange = shiny::updateDateRangeInput,
-      checkboxGroup = shiny::updateCheckboxGroupInput
-    )
-
-    for (p in names(newParams[[n]])) {
-      if (identical(newParams[[n]][[p]], desc$params[[1]][[p]])) {
-        next
-      }
-      args <- newParams[[n]][p]
-      args$session <- session
-      args$inputId <- inputId
-
-      # Special case: update value of select input when choices are modified
-      if (p == "choices" & desc$type == "select") {
-        if (desc$multiple) {
-          args$selected <- intersect(env[[n]], newParams[[n]][[p]])
+        # Skip first evaluation, since widgets have already been rendered with
+        # initial parameters
+        if (get(".initial", envir = moduleEnv())) {
+          assign(".initial", FALSE, envir = moduleEnv())
+          assign(".session", session, envir = moduleEnv())
         } else {
-          if (env[[n]] %in% newParams[[n]][[p]]) {
-            args$selected <- env[[n]]
+          desc <<- updateControls(desc, session, moduleEnv())
+          res <- eval(.expr, envir = moduleEnv())
+          if (is(res, "htmlwidget")) {
+            output[[paste0("output", i)]] <- renderFunction(res)
           }
         }
-      }
-      do.call(updateInputFun, args)
-
-      controlDesc$params[controlDesc$name == inputId][[1]][[p]] <-  newParams[[n]][[p]]
+      })
     }
-  }
 
-  return(controlDesc)
+    for (i in seq_len(controls$nmod)) {
+      updateModule(i)
+    }
+
+    observeEvent(input$done, onDone(.expr, controls, .return))
+  }
 }

@@ -32,7 +32,7 @@ mwControlsUI <- function(controlList, .dir = c("v", "h"), .n = 1, .updateBtn = F
         ctrls <- mwControlsUI(f)
         label <- attr(f, "params")$label
         if (is.null(label)) label <- id
-        id <- gsub(" ", "-", id)
+        id <- gsub("[^a-zA-Z0-9]", "_", id)
         res <- tags$div(
           class="panel panel-default",
           tags$div(
@@ -54,19 +54,20 @@ mwControlsUI <- function(controlList, .dir = c("v", "h"), .n = 1, .updateBtn = F
         params$inputId <- id
         params$width <- ifelse(.dir == "v", "100%", "180px")
 
-        res <- shiny::conditionalPanel(
-          condition = sprintf("input.%s_visible", id),
-          f(params)
-        )
+        res <- f(params)
       }
 
-      res
+      shiny::conditionalPanel(
+        condition = sprintf("input.%s_visible", id),
+        res
+      )
     },
     f = controlList, id = ids,
     SIMPLIFY = FALSE, USE.NAMES = FALSE
   )
 
   vis_checkboxes <- lapply(ids, function(id) {
+    id <- gsub("[^a-zA-Z0-9]", "_", id)
     shiny::checkboxInput(paste0(id, "_visible"), "", value = TRUE)
   })
   vis_checkboxes$style <- "display:none"

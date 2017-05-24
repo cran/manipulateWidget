@@ -16,41 +16,6 @@ library(manipulateWidget)
 
 The `manipulateWidget` package is largely inspired by the `manipulate` package from Rstudio. It provides the function ``manipulateWidget` that can be used to create in a very easy and quick way a graphical interface that lets the user modify the data or the parameters of an interactive chart. Technically, the function generates a Shiny gadget, but the user does not even have to know what is Shiny.
 
-The hard part for the user is to write a code that generates an interactive chart. Once this is
-done, he only has to describe what parameter of the code should be modified by what input control. For instance, consider the following code that identifies clusters in the iris data set and uses package `plotly` to generate an interactive scatter plot. 
-
-```{r kmeans, message=FALSE}
-library(plotly)
-data(iris)
-
-plotClusters <- function(xvar, yvar, nclusters) {
-  clusters <- kmeans(iris[, 1:4], centers = nclusters)
-  clusters <- paste("Cluster", clusters$cluster)
-  
-  plot_ly(x = ~iris[[xvar]], y = ~iris[[yvar]], color = ~clusters,
-          type = "scatter", mode = "markers") %>% 
-    layout(xaxis = list(title=xvar), yaxis = list(title=yvar))
-}
-
-# plotClusters("Sepal.Width", "Sepal.Length", 3)
-```
-
-Once this code has been written, it is very easy to produce a UI that lets the user change the values of the three parameters of the function `plotClusters`:
-
-```{r eval = FALSE}
-varNames <- names(iris)[1:4]
-
-manipulateWidget(
-  plotClusters(xvar, yvar, nclusters),
-  xvar = mwSelect(varNames),
-  yvar = mwSelect(varNames, value = "Sepal.Width"),
-  nclusters = mwSlider(1, 10, value = 3)
-)
-```
-
-
-![An example of output of manipulateWidget](example-kmeans.gif)
-
 The package also provides the `combineWidgets` function to easily combine multiple interactive charts in a single view. Of course both functions can be used together: here is an example that uses packages `dygraphs` and `plot_ly` (code at the end of the document).
 
 ![An example of what one can do with manipulateWidgets](fancy-example.gif)
@@ -137,7 +102,7 @@ combineWidgets(
 
 ### Grouping controls
 
-If you have a large number of inputs, you can easily group them. To do so, simply pass to the function `manipulateWidget` a list of inputs instead of passing directly the inputs. Here is a toy example. Groups are by default collapsed and user can click on their title to display/collapse then. 
+If you have a large number of inputs, you can easily group them. To do so, simply use function `mwGroup()`. Here is a toy example. Groups are by default collapsed and user can click on their title to display/collapse then. 
 
 ```{r eval = FALSE}
 mydata <- data.frame(x = 1:100, y = rnorm(100))
@@ -145,7 +110,7 @@ manipulateWidget(
   dygraph(mydata[range[1]:range[2], ],
           main = title, xlab = xlab, ylab = ylab),
   range = mwSlider(1, 100, c(1, 100)),
-  "Graphical parameters" = list(
+  "Graphical parameters" = mwGroup(
     title = mwText("Fictive time series"),
     xlab = mwText("X axis label"),
     ylab = mwText("Y axis label")
@@ -157,7 +122,7 @@ manipulateWidget(
 
 ### Conditional inputs
 
-Sometimes some inputs are relevant only if other inputs have some value. `manipulateWidget`provides a way to show/hide inputs conditionally to the value of the other inputs thanks to parameter `.display`. This parameter expects a named list of expressions. The names are the ones of the inputs to show/hide and the expressions can include any input and have to evaluate to `TRUE/FALSE`. Here is a toy example, using package `plot_ly`. User can choose points or lines to represent some data. If he chooses lines, then an input appears to let him choose the width of the lines.
+Sometimes some inputs are relevant only if other inputs have some value. `manipulateWidget`provides a way to show/hide inputs conditionally to the value of the other inputs thanks to parameter `.display` of the input generator functions. This parameter needs to be an expression that evaluates to `TRUE` or `FALSE`. Here is a toy example, using package `plot_ly`. User can choose points or lines to represent some data. If he chooses lines, then an input appears to let him choose the width of the lines.
 
 ```{r eval=FALSE}
 mydata <- data.frame(x = 1:100, y = rnorm(100))
@@ -174,43 +139,78 @@ myPlot <- function(type, lwd) {
 manipulateWidget(
   myPlot(type, lwd),
   type = mwSelect(c("points", "lines"), "points"),
-  lwd = mwSlider(1, 10, 1),
-  .display = list(lwd = type == "lines")
+  lwd = mwSlider(1, 10, 1, .display = type == "lines")
 )
 ```
 
 ![Conditional inputs](conditional-inputs.gif)
 
 
+### Updating an input control
+
+`manipulateWidget` provides a simple mecanism to dynamically update inputs. Indeed, all input generator functions (`mwSlider()`, `mwSelect()`, etc.) accept as parameters expressions that depend on the value of the other inputs. Thanks to this mechanism, you can dynamically modify an input based on the value. For instance, one can change the available choices of a select input based on the value of another input.  
+
+Here is an example that uses package `plotly` to represent with a barchart a car from the `mtcars` dataset. User chooses the number of cylinders and then a car among the ones with this number of cylinders.
+
+```{r dynamic_input, eval=FALSE}
+colMax <- apply(mtcars, 2, max)
+
+plotCar <- function(carName) {
+  carValues <- unlist(mtcars[carName, ])
+  carValuesRel <- carValues / colMax
+  plot_ly() %>% 
+    add_bars(x = names(mtcars), y = carValuesRel, text = carValues, 
+             hoverinfo = c("x+text"))
+}
+
+carChoices <- split(row.names(mtcars), mtcars$cyl)
+
+str(carChoices)
+## $ 4: chr [1:11] "Datsun 710" "Merc 240D" "Merc 230" "Fiat 128" ...
+## $ 6: chr [1:7] "Mazda RX4" "Mazda RX4 Wag" "Hornet 4 Drive" "Valiant" ...
+## $ 8: chr [1:14] "Hornet Sportabout" "Duster 360" "Merc 450SE" "Merc 450SL" ...
+
+manipulateWidget(
+  plotCar(car),
+  cylinders = mwSelect(c("4", "6", "8")),
+  car = mwSelect(choices = carChoices[[cylinders]])
+)
+```
+
+![Dynamic inputs](dynamic_inputs.gif)
+
+
 ### Updating a widget
 
 The "normal" use of `manipulateWidget` is to provide an expression that always return an `htmlwidget`. In such case, every time the user changes the value of an input, the current widget is destroyed and a new one is created and rendered. This behavior is not optimal and sometimes it can be painful for the user: consider for instance an interactive map. Each time user changes an input, the map is destroyed and created again, then zoom and location on the map are lost every time.
 
-Some packages provide functions to update a widget that has already been rendered. This is the case for instance for package `leaflet` with the function `leafletProxy`. To use such functions, `manipulateWidget` evaluates the parameter `.expr` with two extra variables:
+Some packages provide functions to update a widget that has already been rendered. This is the case for instance for package `leaflet` with the function `leafletProxy`. To use such functions, `manipulateWidget` evaluates the parameter `.expr` with extra variables:
 
 * `.initial`: `TRUE` if the expression is evaluated for the first time and then the widget has not been rendered yet, `FALSE` if the widget has already been rendered.
 
 * `.session`: A shiny session object.
 
-Moreover the ID of the rendered widget is always "output". Then it is quite easy to write an expression that initializes a widget when it is evaluated the first time and then that updates this widget. Here is an example using package `leaflet`.
+* `.outputId`: ID of the element containing the widget.
+
+It is quite easy to write an expression that initializes a widget when it is evaluated the first time and then updates this widget. Here is an example using package `leaflet`.
 
 ```{r eval=FALSE}
 lon <- rnorm(10, sd = 20)
 lat <- rnorm(10, sd = 20)
 
-myMapFun <- function(radius, color, initial, session) {
+myMapFun <- function(radius, color, initial, session, outputId) {
   if (initial) {
     # Widget has not been rendered
     map <- leaflet() %>% addTiles()
   } else {
     # widget has already been rendered
-    map <- leafletProxy("output", session) %>% clearMarkers()
+    map <- leafletProxy(outputId, session) %>% clearMarkers()
   }
 
   map %>% addCircleMarkers(lon, lat, radius = radius, color = color)
 }
 
-manipulateWidget(myMapFun(radius, color, .initial, .session),
+manipulateWidget(myMapFun(radius, color, .initial, .session, .output),
                  radius = mwSlider(5, 30, 10),
                  color = mwSelect(c("red", "blue", "green")))
 
@@ -248,37 +248,3 @@ manipulateWidget(
 `manipulateWidget` uses Shiny, so it does not work in a "normal" Rmarkdown document. If one uses the function in a code chunck, the htmlwidget will be outputed with the default values of the parameters and there will be no interface to modify the parameters.
 
 Nevertheless, it is possible to include a shiny application in a document with the runtime: shiny (see http://rmarkdown.rstudio.com/authoring_shiny.html). In such setting `manipulateWidget` works normally and the document can be published on a shiny server to let final users play with the parameters of the document.
-
-## By the way
-
-Here is the complete code to generate the animated example in the introduction:
-```{r eval = FALSE}
-myPlotFun <- function(distribution, range, title) {
-  randomFun <- switch(distribution, gaussian = rnorm, uniform = runif)
-  myData <- data.frame(
-    year = seq(range[1], range[2]),
-    value = randomFun(n = diff(range) + 1)
-  )
-  combineWidgets(
-    ncol = 2, colsize = c(2, 1),
-    dygraph(myData, main = title),
-    combineWidgets(
-      plot_ly(x = myData$value, type = "histogram"),
-      paste(
-        "The graph on the left represents a random time series generated using a <b>",
-        distribution, "</b>distribution function.<br/>",
-        "The chart above represents the empirical distribution of the generated values."
-      )
-    )
-  )
-  
-}
-
-manipulateWidget(
-  myPlotFun(distribution, range, title),
-  distribution = mwSelect(choices = c("gaussian", "uniform")),
-  range = mwSlider(2000, 2100, value = c(2000, 2100), label = "period"),
-  title = mwText()
-)
-
-```

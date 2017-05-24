@@ -2,31 +2,6 @@
 knitr::opts_chunk$set(echo = TRUE)
 library(manipulateWidget)
 
-## ----kmeans, message=FALSE-----------------------------------------------
-library(plotly)
-data(iris)
-
-plotClusters <- function(xvar, yvar, nclusters) {
-  clusters <- kmeans(iris[, 1:4], centers = nclusters)
-  clusters <- paste("Cluster", clusters$cluster)
-  
-  plot_ly(x = ~iris[[xvar]], y = ~iris[[yvar]], color = ~clusters,
-          type = "scatter", mode = "markers") %>% 
-    layout(xaxis = list(title=xvar), yaxis = list(title=yvar))
-}
-
-# plotClusters("Sepal.Width", "Sepal.Length", 3)
-
-## ----eval = FALSE--------------------------------------------------------
-#  varNames <- names(iris)[1:4]
-#  
-#  manipulateWidget(
-#    plotClusters(xvar, yvar, nclusters),
-#    xvar = mwSelect(varNames),
-#    yvar = mwSelect(varNames, value = "Sepal.Width"),
-#    nclusters = mwSlider(1, 10, value = 3)
-#  )
-
 ## ----eval=FALSE----------------------------------------------------------
 #  manipulateWidget(
 #    myPlotFun(country),
@@ -84,7 +59,7 @@ combineWidgets(
 #    dygraph(mydata[range[1]:range[2], ],
 #            main = title, xlab = xlab, ylab = ylab),
 #    range = mwSlider(1, 100, c(1, 100)),
-#    "Graphical parameters" = list(
+#    "Graphical parameters" = mwGroup(
 #      title = mwText("Fictive time series"),
 #      xlab = mwText("X axis label"),
 #      ylab = mwText("Y axis label")
@@ -106,27 +81,50 @@ combineWidgets(
 #  manipulateWidget(
 #    myPlot(type, lwd),
 #    type = mwSelect(c("points", "lines"), "points"),
-#    lwd = mwSlider(1, 10, 1),
-#    .display = list(lwd = type == "lines")
+#    lwd = mwSlider(1, 10, 1, .display = type == "lines")
+#  )
+
+## ----dynamic_input, eval=FALSE-------------------------------------------
+#  colMax <- apply(mtcars, 2, max)
+#  
+#  plotCar <- function(carName) {
+#    carValues <- unlist(mtcars[carName, ])
+#    carValuesRel <- carValues / colMax
+#    plot_ly() %>%
+#      add_bars(x = names(mtcars), y = carValuesRel, text = carValues,
+#               hoverinfo = c("x+text"))
+#  }
+#  
+#  carChoices <- split(row.names(mtcars), mtcars$cyl)
+#  
+#  str(carChoices)
+#  ## $ 4: chr [1:11] "Datsun 710" "Merc 240D" "Merc 230" "Fiat 128" ...
+#  ## $ 6: chr [1:7] "Mazda RX4" "Mazda RX4 Wag" "Hornet 4 Drive" "Valiant" ...
+#  ## $ 8: chr [1:14] "Hornet Sportabout" "Duster 360" "Merc 450SE" "Merc 450SL" ...
+#  
+#  manipulateWidget(
+#    plotCar(car),
+#    cylinders = mwSelect(c("4", "6", "8")),
+#    car = mwSelect(choices = carChoices[[cylinders]])
 #  )
 
 ## ----eval=FALSE----------------------------------------------------------
 #  lon <- rnorm(10, sd = 20)
 #  lat <- rnorm(10, sd = 20)
 #  
-#  myMapFun <- function(radius, color, initial, session) {
+#  myMapFun <- function(radius, color, initial, session, outputId) {
 #    if (initial) {
 #      # Widget has not been rendered
 #      map <- leaflet() %>% addTiles()
 #    } else {
 #      # widget has already been rendered
-#      map <- leafletProxy("output", session) %>% clearMarkers()
+#      map <- leafletProxy(outputId, session) %>% clearMarkers()
 #    }
 #  
 #    map %>% addCircleMarkers(lon, lat, radius = radius, color = color)
 #  }
 #  
-#  manipulateWidget(myMapFun(radius, color, .initial, .session),
+#  manipulateWidget(myMapFun(radius, color, .initial, .session, .output),
 #                   radius = mwSlider(5, 30, 10),
 #                   color = mwSelect(c("red", "blue", "green")))
 #  
@@ -148,34 +146,4 @@ combineWidgets(
 #      series = NULL
 #    )
 #  )
-
-## ----eval = FALSE--------------------------------------------------------
-#  myPlotFun <- function(distribution, range, title) {
-#    randomFun <- switch(distribution, gaussian = rnorm, uniform = runif)
-#    myData <- data.frame(
-#      year = seq(range[1], range[2]),
-#      value = randomFun(n = diff(range) + 1)
-#    )
-#    combineWidgets(
-#      ncol = 2, colsize = c(2, 1),
-#      dygraph(myData, main = title),
-#      combineWidgets(
-#        plot_ly(x = myData$value, type = "histogram"),
-#        paste(
-#          "The graph on the left represents a random time series generated using a <b>",
-#          distribution, "</b>distribution function.<br/>",
-#          "The chart above represents the empirical distribution of the generated values."
-#        )
-#      )
-#    )
-#  
-#  }
-#  
-#  manipulateWidget(
-#    myPlotFun(distribution, range, title),
-#    distribution = mwSelect(choices = c("gaussian", "uniform")),
-#    range = mwSlider(2000, 2100, value = c(2000, 2100), label = "period"),
-#    title = mwText()
-#  )
-#  
 

@@ -5,7 +5,7 @@
 \title{Add a Select list input to a manipulateWidget gadget}
 \usage{
 mwSelect(choices = value, value = NULL, label = NULL, ...,
-  multiple = FALSE)
+  multiple = FALSE, .display = TRUE)
 }
 \arguments{
 \item{choices}{Vector or list of choices. If it is named, then the names rather than the
@@ -19,6 +19,9 @@ variable is used.}
 \item{...}{Other arguments passed to function\code{\link[shiny]{selectInput}}.}
 
 \item{multiple}{Is selection of multiple items allowed?}
+
+\item{.display}{expression that evaluates to TRUE or FALSE, indicating when
+the input control should be shown/hidden.}
 }
 \value{
 A function that will generate the input control.
@@ -57,8 +60,8 @@ if (require(plotly)) {
 \seealso{
 Other controls: \code{\link{mwCheckboxGroup}},
   \code{\link{mwCheckbox}}, \code{\link{mwDateRange}},
-  \code{\link{mwDate}}, \code{\link{mwNumeric}},
-  \code{\link{mwPassword}}, \code{\link{mwRadio}},
-  \code{\link{mwSlider}}, \code{\link{mwText}}
+  \code{\link{mwDate}}, \code{\link{mwGroup}},
+  \code{\link{mwNumeric}}, \code{\link{mwPassword}},
+  \code{\link{mwRadio}}, \code{\link{mwSlider}},
+  \code{\link{mwText}}
 }
-

@@ -1,7 +1,22 @@
 #Copyright © 2016 RTE Réseau de transport d’électricité
 
-# Private function used to create input generator functions.
-mwControlFactory <- function(type, inputFunction, params, valueVar = NULL) {
+#' Private function used to create input generator functions.
+#' @param type character string indicating the type of input
+#' @param inputFunction input generator function
+#' @param params A named list containing at least elements "value" and "label".
+#'   Other elements need to be expressions that give the value of a given
+#'   parameter. Use prepareParams() to construct this argument.
+#' @param valueVar name of the parameter containing the value in inputFunction.
+#'   only useful if this parameter is not named "value"
+#' @param .display expression that evaluates to TRUE or FALSE
+#'
+#' @return a function (params) -> html. The function has some attributes:
+#' - params:   parameters entered by the user
+#' - valueVar: names of arguments containing value of the input
+#' - type:     character string containing the input type
+#' - display:  expression that evaluates to TRUE or FALSE
+#' @noRd
+mwControlFactory <- function(type, inputFunction, params, valueVar = NULL, .display = NULL) {
 
   res <- function(params) {
     if (!is.null(valueVar)) {
@@ -10,14 +25,25 @@ mwControlFactory <- function(type, inputFunction, params, valueVar = NULL) {
         for (i in 1:length(valueVar)) params[[valueVar[i]]] <- params$value[[i]]
       }
       params$value <- NULL
+    } else {
+      valueVar <- "value"
     }
     if (is.null(params$label)) params$label <- params$inputId
     do.call(inputFunction, params)
   }
 
   attr(res, "params") <- params
+  attr(res, "valueVar") <- valueVar
   attr(res, "type") <- type
+  attr(res, "display") <- lazyeval::expr_find(.display)
   res
+}
+
+prepareParams <- function(value, label, ...) {
+  params <- lapply(lazyeval::lazy_dots(..., .follow_symbols = TRUE), function(x) x$expr)
+  params$value <- value
+  params$label <- label
+  params
 }
 
 #' Add a Slider to a manipulateWidget gadget
@@ -35,6 +61,8 @@ mwControlFactory <- function(type, inputFunction, params, valueVar = NULL) {
 #'   variable is used.
 #' @param ...
 #'   Other arguments passed to function\code{\link[shiny]{sliderInput}}
+#' @param .display expression that evaluates to TRUE or FALSE, indicating when
+#'   the input control should be shown/hidden.
 #'
 #' @return
 #'   A function that will generate the input control.
@@ -62,11 +90,12 @@ mwControlFactory <- function(type, inputFunction, params, valueVar = NULL) {
 #'
 #' @export
 #' @family controls
-mwSlider <- function(min, max, value, label = NULL, ...) {
+mwSlider <- function(min, max, value, label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "slider",
     function(...) {tags$div(style = "padding:0 5px;", shiny::sliderInput(...))},
-    list(min = min, max = max, value = value, label = label, ...)
+    prepareParams(min = min, max = max, value = value, label = label, ...),
+    .display = .display
   )
 }
 
@@ -94,10 +123,11 @@ mwSlider <- function(min, max, value, label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwText <- function(value = "", label = NULL, ...) {
+mwText <- function(value = "", label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "text", shiny::textInput,
-    list(value = value, label = label, ...)
+    prepareParams(value = value, label = label, ...),
+    .display = .display
   )
 }
 
@@ -126,10 +156,11 @@ mwText <- function(value = "", label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwNumeric <- function(value, label = NULL, ...) {
+mwNumeric <- function(value, label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "numeric", shiny::numericInput,
-    list(value = value, label = label, ...)
+    prepareParams(value = value, label = label, ...),
+    .display = .display
   )
 }
 
@@ -162,10 +193,11 @@ mwNumeric <- function(value, label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwPassword <- function(value = "", label = NULL, ...) {
+mwPassword <- function(value = "", label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "password", shiny::passwordInput,
-    list(value = value, label = label, ...)
+    prepareParams(value = value, label = label, ...),
+    .display = .display
   )
 }
 
@@ -214,11 +246,13 @@ mwPassword <- function(value = "", label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwSelect <- function(choices = value, value = NULL, label = NULL, ..., multiple = FALSE) {
+mwSelect <- function(choices = value, value = NULL, label = NULL, ...,
+                     multiple = FALSE, .display = TRUE) {
   mwControlFactory(
-    "select", shiny::selectizeInput,
-    list(choices = choices, value = value, label = label, ..., multiple = multiple),
-    valueVar = "selected"
+    "select", shiny::selectInput,
+    prepareParams(choices = choices, value = value, label = label, ..., multiple = multiple),
+    valueVar = "selected",
+    .display = .display
   )
 }
 
@@ -248,10 +282,11 @@ mwSelect <- function(choices = value, value = NULL, label = NULL, ..., multiple 
 #'
 #' @export
 #' @family controls
-mwCheckbox <- function(value = FALSE, label = NULL, ...) {
+mwCheckbox <- function(value = FALSE, label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "checkbox", shiny::checkboxInput,
-    list(value = value, label = label, ...)
+    prepareParams(value = value, label = label, ...),
+    .display = .display
   )
 }
 
@@ -284,11 +319,12 @@ mwCheckbox <- function(value = FALSE, label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwRadio <- function(choices, value = NULL, label = NULL, ...) {
+mwRadio <- function(choices, value = NULL, label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "radio", shiny::radioButtons,
-    list(choices = choices, value = value, label = label, ...),
-    valueVar = "selected"
+    prepareParams(choices = choices, value = value, label = label, ...),
+    valueVar = "selected",
+    .display = .display
   )
 }
 
@@ -316,10 +352,11 @@ mwRadio <- function(choices, value = NULL, label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwDate <- function(value = NULL, label = NULL, ...) {
+mwDate <- function(value = NULL, label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "date", shiny::dateInput,
-    list(value = value, label = label, ...)
+    prepareParams(value = value, label = label, ...),
+    .display = .display
   )
 }
 
@@ -348,11 +385,13 @@ mwDate <- function(value = NULL, label = NULL, ...) {
 #'
 #' @export
 #' @family controls
-mwDateRange <- function(value = c(Sys.Date(), Sys.Date() + 1), label = NULL, ...) {
+mwDateRange <- function(value = c(Sys.Date(), Sys.Date() + 1), label = NULL, ...,
+                        .display = TRUE) {
   mwControlFactory(
     "dateRange", shiny::dateRangeInput,
-    list(value = value, label = label, ...),
-    valueVar = c("start", "end")
+    prepareParams(value = value, label = label, ...),
+    valueVar = c("start", "end"),
+    .display = .display
   )
 }
 
@@ -386,11 +425,45 @@ mwDateRange <- function(value = c(Sys.Date(), Sys.Date() + 1), label = NULL, ...
 #'
 #' @export
 #' @family controls
-mwCheckboxGroup <- function(choices, value = c(), label = NULL, ...) {
+mwCheckboxGroup <- function(choices, value = c(), label = NULL, ..., .display = TRUE) {
   mwControlFactory(
     "checkboxGroup", shiny::checkboxGroupInput,
-    list(choices = choices, value = value, label = label, ...),
-    valueVar = "selected"
+    prepareParams(choices = choices, value = value, label = label, ...),
+    valueVar = "selected",
+    .display = .display
   )
 }
 
+#' Group inputs in a collapsible box
+#'
+#' This function generates a collapsible box containing inputs. It can be useful
+#' when there are a lot of inputs and one wants to group them.
+#'
+#' @param ... inputs that will be grouped in the box
+#' @param .display expression that evaluates to TRUE or FALSE, indicating when
+#'   the group should be shown/hidden.
+#'
+#' @return List of inputs
+#'
+#' @examples
+#' if(require(dygraphs)) {
+#'   mydata <- data.frame(x = 1:100, y = rnorm(100))
+#'   manipulateWidget(
+#'     dygraph(mydata[range[1]:range[2], ],
+#'             main = title, xlab = xlab, ylab = ylab),
+#'     range = mwSlider(1, 100, c(1, 100)),
+#'     "Graphical parameters" = mwGroup(
+#'       title = mwText("Fictive time series"),
+#'       xlab = mwText("X axis label"),
+#'       ylab = mwText("Y axis label")
+#'     )
+#'   )
+#' }
+#'
+#' @export
+#' @family controls
+mwGroup <- function(..., .display = TRUE) {
+  res <- list(...)
+  attr(res, "display") <- lazyeval::expr_find(.display)
+  res
+}

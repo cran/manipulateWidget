@@ -6,8 +6,9 @@
 \usage{
 manipulateWidget(.expr, ..., .main = NULL, .updateBtn = FALSE,
   .controlPos = c("left", "top", "right", "bottom", "tab"), .tabColumns = 2,
-  .viewer = c("pane", "window", "browser"), .display = NULL,
-  .updateInputs = NULL, .compare = NULL, .compareLayout = c("v", "h"))
+  .viewer = c("pane", "window", "browser"), .compare = NULL,
+  .compareLayout = c("v", "h"), .return = function(widget, envs) {    
+  widget }, .width = NULL, .height = NULL)
 }
 \arguments{
 \item{.expr}{expression to evaluate that returns an interactive plot of class
@@ -40,19 +41,6 @@ should be used ? This parameter is used only if \code{controlPos = "tab"}}
 corresponds to the Rstudio viewer, \code{"window"} to a dialog window, and
 \code{"browser"} to an external web browser.}
 
-\item{.display}{A named list of conditions that evaluate to TRUE OR FALSE
-indicating when inputs should be displayed. These conditions are
-reevaluated each time a control it modified. By default, each control is
-displayed, but if the name of a control appears in this list, then the
-associated condition is evaluated. If the result is TRUE then the control
-is visible, else it is hidden.}
-
-\item{.updateInputs}{This parameter is similar to `.display` and can be used
-to dynamically update input controls. It must be a named list where names
-correspond to names of input controls and values are named lists of
-expressions where names correspond to arguments of the input generator
-function.}
-
 \item{.compare}{Sometimes one wants to compare the same chart but with two
 different sets of parameters. This is the purpose of this argument. It must
 be a named list whose names are the names of the inputs that should vary
@@ -65,7 +53,19 @@ charts.}
 
 \item{.compareLayout}{Used only when \code{.compare} is set. Possible values
 are "v" for vertical layout (one chart above the other) and "h" for
-horizontal layout (one chart on the right of the other)}
+horizontal layout (one chart on the right of the other).}
+
+\item{.return}{A function that can be used to modify the output of
+\code{manipulateWidget}. It must take two parameters: the first one is the
+final widget, the second one is a list of environments containing the input
+values of each individual widget. The length of this list is one if .compare
+is null, two or more if it has been defined.}
+
+\item{.width}{Width of the UI. Used only on Rmarkdown documents with option
+\code{runtime: shiny}.}
+
+\item{.height}{Height of the UI. Used only on Rmarkdown documents with option
+\code{runtime: shiny}.}
 }
 \value{
 The result of the expression evaluated with the last values of the controls.
@@ -115,6 +115,18 @@ variables:
 You can take a look at the last example to see how to use these two
 variables to update a leaflet widget.
 }
+
+\section{Modify the returned widget}{
+
+  In some specific situations, a developer may want to use
+  \code{manipulateWidget} in a function that waits the user to click on the
+  "Done" button and modifies the widget returned by \code{manipulateWidget}.
+  In such situation, parameter \code{.return} should be used so that
+  \code{manipulateWidget} is the last function called. Indeed, if other code
+  is present after, the custom function will act very weird in a Rmarkdown
+  document with "runtime: shiny".
+}
+
 \examples{
 if (require(dygraphs)) {
 
@@ -185,17 +197,16 @@ if (require("plotly")) {
   manipulateWidget(
     myPlot(type, lwd),
     type = mwSelect(c("points", "lines"), "points"),
-    lwd = mwSlider(1, 10, 1),
-    .display = list(lwd = type == "lines")
+    lwd = mwSlider(1, 10, 1, .display = type == "lines")
   )
 
 }
 
 # Advanced Usage
 #
-# .expr is evaluated with two extra variables .initial and .session that can
-# be used to update an already rendered widget instead of replacing it each
-# time an input value is modified.
+# .expr is evaluated with extra variables .initial, .outputId and .session
+# that can be used to update an already rendered widget instead of replacing
+# it each time an input value is modified.
 #
 # Here we generate a UI that permits to change color and size of arbitrary
 # points on a map generated with leaflet.
@@ -223,4 +234,3 @@ if (require(leaflet)) {
 }
 
 }
-
