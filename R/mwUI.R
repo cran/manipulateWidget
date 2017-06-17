@@ -1,133 +1,140 @@
-#Copyright © 2016 RTE Réseau de transport d’électricité
-
-#' Generate the UI of a manipulateWidget gadget
-#'
-#' This function can be used if you desire to create a gadget that has the same
-#' UI as a manipulateWidget gadget but with a custom server logic.
+#' Private function that generates the general layout of the application
 #'
 #' @param controls Object returned by preprocessControls
-#' @param .outputFun The output function for the desired htmlwidget.
-#' @param .outputId Id of the output element in the shiny interface.
-#' @param .titleBar Whether to include a title bar with controls in the widget
-#' @param .controlList List of input controls. This is an alternative to
-#'   specifying directly the controls through the \code{...} arguments.
-#' @param .container tag function that will be used to enclose the UI.
-#' @param .style CSS style to apply to the container element.
-#' @param .env Environment used to evaluate the inital values of controls. This
-#'   parameter may have an impact on the result only when \code{.updateInputs}
-#'   is used.
-#' @inheritParams manipulateWidget
+#' @param ncol Number of columns in the chart area.
+#' @param nrow Number of rows in the chart area.
+#' @param outputFun Function that generates the html elements that will contain
+#'   a given widget
+#' @param okBtn Should the OK Button be added to the UI ?
+#' @param updateBtn Should the updateBtn be added to the UI ? Currently unused.
 #'
-#' @return
-#' A \code{shiny.tag.list} object that can be used in function
-#' \code{\link[shiny]{runGadget}} as ui parameter.
+#' @return shiny tags
 #'
 #' @noRd
-#'
-mwUI <- function(.controlList, .controlPos = c("left", "top", "right", "bottom", "tab"),
-                 .tabColumns = 2, .updateBtn = FALSE, .main = "",
-                 .outputFun = NULL, .outputId = "output1",
-                 .titleBar = TRUE, .updateInputs = NULL, nmod = 1, .compareLayout = c("v", "h"),
-                 .container = miniUI::miniContentPanel,
-                 .style = "") {
+mwUI <- function(controls, nrow = 1, ncol = 1, outputFun = NULL,
+                      okBtn = TRUE, updateBtn = FALSE, areaBtns = TRUE, border = FALSE) {
 
-  .controlPos <- match.arg(.controlPos)
-  .compareLayout <- match.arg(.compareLayout)
+  htmldep <- htmltools::htmlDependency(
+    "manipulateWidget",
+    "0.7.0",
+    system.file("manipulate_widget", package = "manipulateWidget"),
+    script = "manipulate_widget.js",
+    style = "manipulate_widget.css"
+  )
 
-  commonControls <- .controlList$shared
+  showSettings <- controls$nmod == 1 || length(controls$controls$shared) > 0
+  if (border) class <- "mw-container with-border"
+  else class <- "mw-container"
 
-  if (nmod == 1) {
-    if(is.null(.outputFun)) {
-      .content <- shiny::htmlOutput(.outputId, style = "height:100%;width:100%")
-    } else {
-      .content <- .outputFun(.outputId, width = "100%", height = "100%")
-    }
-  } else {
-    modules <- lapply(seq_along(.controlList$ind), function(i) {
-      mwUI(.controlList = list(shared = .controlList$ind[[i]]),
-           nmod = 1, .outputFun = .outputFun,
-           .outputId = paste0("output", i), .titleBar = FALSE, .container=shiny:: fillRow,
-           .style = "margin-left:5px; padding: 0 0 5px 5px;border-left: solid 1px #ddd;")
-    })
-    if (.compareLayout == "v") {
-      .content <- do.call(shiny:: fillCol, modules)
-    } else {
-      .content <- do.call(shiny:: fillRow, modules)
-    }
-  }
-
-  if (length(commonControls) == 0) {
-    ui <- .container(
-      .content,
-      style = .style
+  container <- fillPage(
+    tags$div(
+      class = class,
+      fillRow(
+        flex = c(NA, NA, 1),
+        .uiMenu(controls$nmod, nrow, ncol, showSettings, okBtn, updateBtn, areaBtns),
+        .uiControls(controls),
+        .uiChartarea(controls$nmod, nrow, ncol, outputFun)
+      )
     )
-  } else if (.controlPos == "tab") {
-    ctrls <- mwControlsUI(commonControls, .dir = "v", .n = .tabColumns,
-                          .updateBtn = .updateBtn)
-    ui <- miniTabstripPanel(
-      miniTabPanel("Parameters", icon = shiny::icon("sliders"),
-        miniContentPanel(
-          ctrls
-        )
+  )
+
+  htmltools::attachDependencies(container, htmldep, TRUE)
+}
+
+.uiControls <- function(controls) {
+   controls <- c(list(controls$controls$shared), controls$controls$ind)
+   controls <- unname(lapply(controls, function(x) {
+     if (length(x) == 0) return(NULL)
+     tags$div(class = "mw-inputs", mwControlsUI(x))
+   }))
+
+   controls$class <- "mw-input-container"
+   do.call(tags$div, controls)
+}
+
+.uiChartarea <- function(ncharts, nrow, ncol, outputFun) {
+  outputEls <- lapply(seq_len(nrow * ncol), function(i) {
+    if (i > ncharts) return(tags$div())
+    outputId <- paste0("output", i)
+    if (is.null(outputFun)) {
+      el <- combineWidgetsOutput(outputId, width = "100%", height = "100%")
+    } else {
+      el <- outputFun(outputId, width = "100%", height = "100%")
+    }
+    tags$div(class="mw-chart", el)
+  })
+
+  outputEls <- split(outputEls, (1:(ncol*nrow) - 1) %/% ncol)
+  rows <- lapply(outputEls, function(x) {
+    do.call(shiny::fillRow, x)
+  })
+
+  do.call(shiny::fillCol, unname(rows))
+}
+
+.uiMenu <- function(ncharts, nrow, ncol, settingsBtn, okBtn, updateBtn, areaBtns) {
+  container <- tags$div(
+    class="mw-menu"
+  )
+
+  if (settingsBtn) {
+    settingsBtn <- tags$div(
+      class = "mw-btn mw-btn-settings",
+      tags$div(
+        class = "bt1",
+        icon("gears")
       ),
-      miniTabPanel("Plot", icon = shiny::icon("area-chart"),
-        miniContentPanel(
-         .content
-        )
-      )
+      tags$div(class="right-arrow")
     )
-
-  } else if (.controlPos == "left") {
-    ctrls <- mwControlsUI(commonControls, .dir = "v", .updateBtn = .updateBtn)
-    ui <- .container(
-      style = .style,
-      shiny:: fillRow(flex = c(NA, 1),
-              tags$div(style ="width:200px;height:100%;overflow-y:auto;", ctrls),
-              .content
-      )
-    )
-
-  } else if (.controlPos == "top") {
-    ctrls <- mwControlsUI(commonControls, .dir = "h",.updateBtn = .updateBtn)
-    ui <- .container(
-      style = .style,
-      shiny:: fillCol(flex = c(NA, 1),
-              ctrls,
-              .content
-      )
-    )
-
-  } else if (.controlPos == "right") {
-    ctrls <- mwControlsUI(commonControls, .dir = "v", .updateBtn = .updateBtn)
-    ui <- .container(
-      style = .style,
-      shiny:: fillRow(flex = c(1, NA),
-              .content,
-              tags$div(style ="width:200px;height:100%;overflow-y:auto;", ctrls)
-      )
-    )
-
-  } else if (.controlPos == "bottom") {
-    ctrls <- mwControlsUI(commonControls, .dir = "h", .updateBtn = .updateBtn)
-    ui <- .container(
-      style = .style,
-      shiny:: fillCol(flex = c(1, NA),
-              .content,
-              ctrls
-      )
-    )
+    container <- tagAppendChild(container, settingsBtn)
   }
 
-  if (.titleBar) {
-    res <- miniPage(
-      gadgetTitleBar(.main),
-      ui
-    )
-  } else {
-    res <- miniPage(
-      ui
-    )
+  if (areaBtns && ncharts > 1) {
+    container <- tagAppendChild(container, .uiChartBtns(ncharts, nrow, ncol))
   }
 
-  res
+  if (updateBtn) {
+    updateBtn <- tags$div(
+      class = "mw-btn mw-btn-update",
+      shiny::actionButton(".update", "", icon = shiny::icon("refresh"), class = "bt1")
+    )
+    container <- tagAppendChild(container, updateBtn)
+  }
+
+  if (okBtn) {
+    okBtn <- shiny::actionButton("done", "OK", class = "mw-btn mw-btn-ok")
+    container <- tagAppendChild(container, okBtn)
+  }
+  container
+}
+
+.uiChartBtns <- function(ncharts, nrow, ncol) {
+  btns <- lapply(seq_len(ncharts), function(i) {
+    tags$div(
+      class = "mw-btn mw-btn-area",
+      .uiChartIcon(i, nrow, ncol),
+      tags$div(class="right-arrow")
+    )
+  })
+
+  btns$class <- "mw-chart-selection"
+
+  do.call(tags$div, btns)
+}
+
+.uiChartIcon <- function(i, nrow, ncol) {
+  WIDTH <- 42
+  HEIGHT <- 28
+  PAD <- 2
+  i <- i - 1
+
+  w <- (WIDTH - 2 * PAD) / ncol
+  h <- (HEIGHT - 2 * PAD) / nrow
+
+  chartIconStyle <- sprintf("width:%spx;height:%spx;left:%spx;top:%spx;",
+                            w, h, w * (i%%ncol) + PAD, h * (i %/% ncol) + PAD)
+  tags$div(
+    class = "mw-icon-areachart",
+    tags$div(class="mw-icon-chart", style=chartIconStyle)
+  )
 }

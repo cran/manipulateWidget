@@ -3,7 +3,6 @@
 #'
 #' @param controls list of controls
 #' @param compare list describing how comparison should be done
-#' @param update non evaluated list
 #' @param env environment
 #'
 #' @return
@@ -28,7 +27,7 @@
 #'    - ind: list of list of individual inputs (one for each module)
 #'
 #' @noRd
-preprocessControls <- function(controls, compare = NULL, update = NULL, env) {
+preprocessControls <- function(controls, compare = NULL, env, ncharts) {
   # Initialize object returned by the function
   res <- list(
     desc = data.frame(),
@@ -48,14 +47,7 @@ preprocessControls <- function(controls, compare = NULL, update = NULL, env) {
   res$env$shared$.output <- "output1"
 
   # Number of modules to create
-  nmod <- 1
-  if (!is.null(compare)) {
-    if (!is.null(compare$.n)) {
-      nmod <- compare$.n
-    } else {
-      nmod <- 2
-    }
-  }
+  nmod <- ncharts
 
   res$nmod <- nmod
 
@@ -77,6 +69,18 @@ preprocessControls <- function(controls, compare = NULL, update = NULL, env) {
   controlsDesc <- getControlDesc(controls)
   controlsDesc$inputId <- gsub("[^a-zA-Z0-9]", "_", controlsDesc$name)
   controlsDesc$mod <- 0
+
+  # Check if groups have to be compared. if so indicate that the controls belonging
+  # to these groups need to be compared.
+  groupnames <- controlsDesc$name[controlsDesc$type == "group"]
+  while (any(names(compare) %in% groupnames)) {
+    addToCompare <- controlsDesc$name[controlsDesc$group %in% names(compare)]
+    addToCompare <- sapply(addToCompare, function(x) NULL,
+                           simplify = FALSE, USE.NAMES = TRUE)
+
+    compare[intersect(names(compare), groupnames)] <- NULL
+    compare <- append(compare, addToCompare)
+  }
 
   controlsDescShared <- subset(controlsDesc, !name %in% names(compare))
   tmp <- list()

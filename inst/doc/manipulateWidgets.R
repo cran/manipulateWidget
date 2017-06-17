@@ -53,6 +53,24 @@ combineWidgets(
   rightCol = "<div style='margin-top:150px;'>right column</div>"
 )
 
+## ----eval=FALSE----------------------------------------------------------
+#  mydata <- data.frame(
+#    timeId = 1:100,
+#    series1 = rnorm(100),
+#    series2 = rnorm(100),
+#    series3 = rnorm(100)
+#  )
+#  manipulateWidget(
+#    dygraph(mydata[range[1]:range[2], c("timeId", series)], main = title),
+#    range = mwSlider(1, 100, c(1, 100)),
+#    series = mwSelect(c("series1", "series2", "series3")),
+#    title = mwText(),
+#    .compare = list(
+#      title = list("First chart", "Second chart"),
+#      series = NULL
+#    )
+#  )
+
 ## ----eval = FALSE--------------------------------------------------------
 #  mydata <- data.frame(x = 1:100, y = rnorm(100))
 #  manipulateWidget(
@@ -128,22 +146,4 @@ combineWidgets(
 #                   radius = mwSlider(5, 30, 10),
 #                   color = mwSelect(c("red", "blue", "green")))
 #  
-
-## ----eval=FALSE----------------------------------------------------------
-#  mydata <- data.frame(
-#    timeId = 1:100,
-#    series1 = rnorm(100),
-#    series2 = rnorm(100),
-#    series3 = rnorm(100)
-#  )
-#  manipulateWidget(
-#    dygraph(mydata[range[1]:range[2], c("timeId", series)], main = title),
-#    range = mwSlider(1, 100, c(1, 100)),
-#    series = mwSelect(c("series1", "series2", "series3")),
-#    title = mwText(),
-#    .compare = list(
-#      title = list("First chart", "Second chart"),
-#      series = NULL
-#    )
-#  )
 

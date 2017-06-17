@@ -22,31 +22,22 @@
 #'   arguments. for instance \code{mygroup = list(txt = mwText(""), nb =
 #'   mwNumeric(0))} creates a group of inputs named mygroup with two inputs
 #'   named "txt" and "nb".
-#' @param .main Title of the shiny gadget
 #' @param .updateBtn Should an update button be added to the controls ? If
 #'   \code{TRUE}, then the graphic is updated only when the user clicks on the
 #'   update button.
-#' @param .controlPos Where controls should be placed ? By default, they are
-#'   placed in the left, next to the graphic. If \code{controlPos = "tab"}, two
-#'   tabs are created: one containing controls and the other containing the
-#'   graphic.
-#' @param .tabColumns If controls are placed in a distinct tab, how many columns
-#'   should be used ? This parameter is used only if \code{controlPos = "tab"}
 #' @param .viewer Controls where the gadget should be displayed. \code{"pane"}
 #'   corresponds to the Rstudio viewer, \code{"window"} to a dialog window, and
 #'   \code{"browser"} to an external web browser.
 #' @param .compare Sometimes one wants to compare the same chart but with two
-#'   different sets of parameters. This is the purpose of this argument. It must
-#'   be a named list whose names are the names of the inputs that should vary
-#'   between the two charts. All other parameters are common to the two charts
-#'   and changing their values will change the two charts. Each element of the
-#'   list must be a vector or a list of length 2 with the initial values of the
-#'   corresponding parameter for each chart. It can also be \code{NULL}. In this
-#'   case, the parameter is initialized with the default value for the two
-#'   charts.
-#' @param .compareLayout Used only when \code{.compare} is set. Possible values
-#'   are "v" for vertical layout (one chart above the other) and "h" for
-#'   horizontal layout (one chart on the right of the other).
+#'   different sets of parameters. This is the purpose of this argument. It can
+#'   be a character vector of input names or a named list whose names are the
+#'   names of the inputs that should vary between the two charts. Each element
+#'   of the list must be a vector or a list of length equal to the number of
+#'   charts with the initial values of the corresponding parameter for each
+#'   chart. It can also be \code{NULL}. In this case, the parameter is
+#'   initialized with the default value for the two charts.
+#' @param .compareOpts List of options created \code{\link{compareOptions}}.
+#'   These options indicate the number of charts to create and their disposition.
 #' @param .return A function that can be used to modify the output of
 #'   \code{manipulateWidget}. It must take two parameters: the first one is the
 #'   final widget, the second one is a list of environments containing the input
@@ -122,11 +113,21 @@
 #'     series2 = rnorm(100),
 #'     series3 = rnorm(100)
 #'   )
+#'
 #'   manipulateWidget(
 #'     dygraph(mydata[range[1]:range[2] - 2000, c("year", series)], main = title),
 #'     range = mwSlider(2001, 2100, c(2001, 2100)),
 #'     series = mwSelect(c("series1", "series2", "series3")),
 #'     title = mwText("Fictive time series"),
+#'     .compare = c("title", "series")
+#'   )
+#'
+#'   # Setting different initial values for each chart
+#'   manipulateWidget(
+#'     dygraph(mydata[range[1]:range[2] - 2000, c("year", series)], main = title),
+#'     range = mwSlider(2001, 2100, c(2001, 2100)),
+#'     series = mwSelect(c("series1", "series2", "series3")),
+#'     title = mwText(),
 #'     .compare = list(
 #'       title = list("First chart", "Second chart"),
 #'       series = NULL
@@ -211,12 +212,10 @@
 #'
 #' @export
 #'
-manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
-                             .controlPos = c("left", "top", "right", "bottom", "tab"),
-                             .tabColumns = 2,
+manipulateWidget <- function(.expr, ..., .updateBtn = FALSE,
                              .viewer = c("pane", "window", "browser"),
                              .compare = NULL,
-                             .compareLayout = c("v", "h"),
+                             .compareOpts = compareOptions(),
                              .return = function(widget, envs) {widget},
                              .width = NULL, .height = NULL) {
 
@@ -224,35 +223,30 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
   isRuntimeShiny <- identical(knitr::opts_knit$get("rmarkdown.runtime"), "shiny")
 
   .expr <- substitute(.expr)
-  .updateInputs <- substitute(.updateInputs)
   .viewer <- match.arg(.viewer)
-  .controlPos <- match.arg(.controlPos)
-  .compareLayout <- match.arg(.compareLayout)
   .env <- parent.frame()
-  compareMode <- !is.null(.compare)
+  .compareOpts <- do.call(compareOptions, .compareOpts)
 
-  if (.controlPos == "tab") .updateBtn <- FALSE
+  if (is.null(.compare)) {
+      .compareOpts$ncharts <- 1
+  } else {
+    if (is.character(.compare)) {
+      .compare <- sapply(.compare, function(x) NULL,
+                         simplify = FALSE, USE.NAMES = TRUE)
+    }
 
-  if (is.null(.main)) {
-    .main <- paste(deparse(.expr), collapse = ";")
-    .main <- gsub("^\\{ *;?", "", .main)
-    .main <- gsub("\\}$", "", .main)
-    if (nchar(.main) > 53) {
-      .main <- substring(.main, 1, 50)
-      .main <- paste0(.main, " ...")
+    if (is.null(.compareOpts$ncharts) || .compareOpts$ncharts < 2) {
+      .compareOpts$ncharts <- 2
     }
   }
 
   # Evaluate a first time .expr to determine the class of the output
-  controls <- preprocessControls(list(...), .compare, .updateInputs, env = .env)
+  controls <- preprocessControls(list(...), .compare, env = .env,
+                                 ncharts = .compareOpts$ncharts)
 
   initWidgets <- lapply(controls$env$ind, function(e) {
     eval(.expr, envir = e)
   })
-
-  controlDesc <- getControlDesc(controls[c("common", "ind")])
-
-
 
   # Get shiny output and render functions
   if (is(initWidgets[[1]], "htmlwidget")) {
@@ -264,35 +258,30 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
 
     OutputFunName <- ls(getNamespace(pkg), pattern = "Output$")
     outputFunction <- getFromNamespace(OutputFunName, pkg)
+    useCombineWidgets <- FALSE
   } else {
-    renderFunction <- shiny::renderUI
-    outputFunction <- NULL
+    renderFunction <- renderCombineWidgets
+    outputFunction <- combineWidgetsOutput
+    useCombineWidgets <- TRUE
   }
 
-  # UI
-  ui <- mwUI(
-    controls$controls,
-    .controlPos = .controlPos,
-    .tabColumns = .tabColumns,
-    .updateBtn = .updateBtn,
-    .main = .main,
-    .outputFun = outputFunction,
-    .titleBar = !isRuntimeShiny,
-    .compareLayout = .compareLayout,
-    nmod = controls$nmod
-  )
+  dims <- .getRowAndCols(.compareOpts$ncharts, .compareOpts$nrow, .compareOpts$ncol)
 
+  ui <- mwUI(controls, dims$nrow, dims$ncol, outputFunction, okBtn = !isRuntimeShiny,
+             updateBtn = .updateBtn, areaBtns = length(.compare) > 0, border = isRuntimeShiny)
   server <- mwServer(.expr, controls, initWidgets,
                      renderFunction,
-                     .compareLayout,
                      .updateBtn,
-                     .return)
+                     .return,
+                     dims$nrow, dims$ncol,
+                     useCombineWidgets)
 
   if (interactive()) {
     # We are in an interactive session so we start a shiny gadget
-    .viewer <- switch(.viewer,
+    .viewer <- switch(
+      .viewer,
       pane = shiny::paneViewer(),
-      window = shiny::dialogViewer(.main),
+      window = shiny::dialogViewer("manipulateWidget"),
       browser = shiny::browserViewer()
     )
     shiny::runGadget(ui, server, viewer = .viewer)
@@ -302,6 +291,6 @@ manipulateWidget <- function(.expr, ..., .main = NULL, .updateBtn = FALSE,
   } else {
     # Other cases (Rmarkdown or non interactive execution). We return the initial
     # widget to not block the R execution.
-    mwReturn(initWidgets, .return, controls$env$ind)
+    mwReturn(initWidgets, .return, controls$env$ind, dims$nrow, dims$ncol)
   }
 }

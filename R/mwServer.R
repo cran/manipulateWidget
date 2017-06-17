@@ -14,10 +14,11 @@
 #'
 mwServer <- function(.expr, controls, widgets,
                      renderFunction,
-                     .compareLayout,
-                     .updateBtn, .return) {
+                     .updateBtn, .return, nrow, ncol, useCombineWidgets) {
+
 
   function(input, output, session) {
+    message("Click on the 'OK' button to return to the R session.")
     # Ensure that initial values of select inputs with multiple = TRUE are in
     # same order than the user asked.
     selectInputList <- subset(controls$desc, type == "select" & multiple)
@@ -31,6 +32,7 @@ mwServer <- function(.expr, controls, widgets,
 
     updateModule <- function(i) {
       # Initialize the widgets with their first evaluation
+      if (useCombineWidgets) widgets[[i]] <- combineWidgets(widgets[[i]])
       output[[paste0("output", i)]] <- renderFunction(widgets[[i]])
 
       desc <- subset(controls$desc, mod %in% c(0, i))
@@ -60,6 +62,7 @@ mwServer <- function(.expr, controls, widgets,
         } else {
           desc <<- updateControls(desc, session, moduleEnv())
           res <- eval(.expr, envir = moduleEnv())
+          if (useCombineWidgets) res <- combineWidgets(res)
           if (is(res, "htmlwidget")) {
             output[[paste0("output", i)]] <- renderFunction(res)
           }
@@ -71,6 +74,6 @@ mwServer <- function(.expr, controls, widgets,
       updateModule(i)
     }
 
-    observeEvent(input$done, onDone(.expr, controls, .return))
+    observeEvent(input$done, onDone(.expr, controls, .return, nrow, ncol))
   }
 }
