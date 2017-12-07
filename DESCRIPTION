@@ -1,13 +1,16 @@
 Package: manipulateWidget
 Type: Package
 Title: Add Even More Interactivity to Interactive Charts
-Version: 0.7.0
-Date: 2017-05-24
+Version: 0.8.0
+Date: 2017-11-27
 Authors@R: c(
-    person("Francois", "Guillem", email = "francois.guillem@rte-france.com", role = c("aut", "cre")),
+    person("Jalal-Edine", "ZAWAM", email = "jalal-edine.zawam@rte-france.com", role = c("aut", "cre")),
+    person("Francois", "Guillem", email = "francois.guillem@rte-france.com", role = c("aut")),
     person("RTE", role = "cph"),
     person("JJ", "Allaire", role = "ctb"),
-	  person("Marion", "Praz", email="mnpraz@gmail.com", role = "ctb", comment = "New user interface")
+	  person("Marion", "Praz", email="mnpraz@gmail.com", role = "ctb", comment = "New user interface"),
+	  person("Benoit", "Thieurmel", role = "ctb", email = "benoit.thieurmel@datastorm.fr"),
+	  person(given = "Titouan", family = "Robert", email = "titouan.robert@datastorm.fr", role = "ctb")
     )
 Description: Like package 'manipulate' does for static graphics, this package
     helps to easily add controls like sliders, pickers, checkboxes, etc. that 
@@ -16,19 +19,22 @@ Description: Like package 'manipulate' does for static graphics, this package
 URL: https://github.com/rte-antares-rpackage/manipulateWidget
 BugReports: https://goo.gl/pV7o5c
 License: GPL (>= 2) | file LICENSE
-Imports: shiny, miniUI, htmltools, htmlwidgets, lazyeval, knitr,
-        methods, tools, base64enc, grDevices
+Imports: shiny (>= 1.0.3), miniUI, htmltools, htmlwidgets, knitr,
+        methods, tools, base64enc, grDevices, codetools
 Suggests: dygraphs, leaflet, plotly, xts, rmarkdown, testthat, covr
 LazyData: TRUE
 RoxygenNote: 6.0.1
 VignetteBuilder: knitr
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2017-06-16 14:59:14 UTC; franguil
-Author: Francois Guillem [aut, cre],
+Packaged: 2017-12-07 09:00:06 UTC; jalazawa
+Author: Jalal-Edine ZAWAM [aut, cre],
+  Francois Guillem [aut],
   RTE [cph],
   JJ Allaire [ctb],
-  Marion Praz [ctb] (New user interface)
-Maintainer: Francois Guillem <francois.guillem@rte-france.com>
+  Marion Praz [ctb] (New user interface),
+  Benoit Thieurmel [ctb],
+  Titouan Robert [ctb]
+Maintainer: Jalal-Edine ZAWAM <jalal-edine.zawam@rte-france.com>
 Repository: CRAN
-Date/Publication: 2017-06-17 08:48:22 UTC
+Date/Publication: 2017-12-07 09:32:17 UTC
