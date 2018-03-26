@@ -1,5 +1,17 @@
 <!-- Copyright © 2016 RTE Réseau de transport d’électricité --->
 
+# manipulateWidget 0.9.0 (2018-01-29)
+
+## New features
+* Can add a label to `mwGroup`
+* new ``mwSelectize`` input
+* add ``.showCompare``
+
+## Bugfixes
+* Loss of scrollbar using `shiny` with `fluidPage` and `manipulateWidget`
+* Fix Handle shiny tag objects with HTML dependencies
+* Preserve the class of widgets that are passed to combineWidgets
+
 # manipulateWidget 0.8.0 (2017-11-27)
 
 ## New features

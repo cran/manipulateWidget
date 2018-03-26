@@ -18,8 +18,8 @@
 #' @noRd
 mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
                  okBtn = TRUE, saveBtn = TRUE, updateBtn = FALSE,
-                 areaBtns = TRUE, border = FALSE,
-                 width = "100%", height = "400px") {
+                 areaBtns = TRUE, border = FALSE, width = "100%", height = "400px",
+                 fillPage = TRUE, showCompare = TRUE) {
 
   htmldep <- htmltools::htmlDependency(
     "manipulateWidget",
@@ -33,18 +33,31 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
   if (border) class <- "mw-container with-border"
   else class <- "mw-container"
 
-  container <- fillPage(
-    tags$div(
-      class = class,
-      style = paste("width:", width, ";height:", height, ";"),
-      fillRow(
-        flex = c(NA, NA, 1),
-        .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, updateBtn, areaBtns),
-        .uiInputs(ns, inputs),
-        .uiChartarea(ns, inputs$ncharts, nrow, ncol, outputFun)
+  if(fillPage){
+    container <- fillPage(
+      tags$div(
+        class = class,
+        style = paste("width:", width, ";height:", height, ";"),
+        fillRow(
+          flex = c(NA, NA, 1),
+          .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, updateBtn, areaBtns, showCompare),
+          .uiInputs(ns, inputs),
+          .uiChartarea(ns, inputs$ncharts, nrow, ncol, outputFun)
+        )
       )
     )
-  )
+  } else {
+    container <- tags$div(
+        class = class,
+        fillRow(
+          flex = c(NA, NA, 1),
+          width = width, height = height,
+          .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, updateBtn, areaBtns, showCompare),
+          .uiInputs(ns, inputs),
+          .uiChartarea(ns, inputs$ncharts, nrow, ncol, outputFun)
+        )
+      )
+  }
 
   htmltools::attachDependencies(container, htmldep, TRUE)
 }
@@ -82,7 +95,7 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
   )
 }
 
-.uiMenu <- function(ns, ncharts, nrow, ncol, settingsBtn, okBtn, saveBtn, updateBtn, areaBtns) {
+.uiMenu <- function(ns, ncharts, nrow, ncol, settingsBtn, okBtn, saveBtn, updateBtn, areaBtns, showCompare = TRUE) {
   container <- tags$div(
     class="mw-menu"
   )
@@ -100,7 +113,7 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
     container <- tagAppendChild(container, settingsBtn)
   }
 
-  if (areaBtns && ncharts > 1) {
+  if ((areaBtns && ncharts > 1) &  showCompare){
     container <- tagAppendChild(container, .uiChartBtns(ns, ncharts, nrow, ncol))
   }
 

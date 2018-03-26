@@ -51,7 +51,7 @@ MWController <- setRefClass(
              "returnFunc", "initialized"),
   methods = list(
 
-    initialize = function(expr, inputs, autoUpdate = list(value = TRUE, initBtn = FALSE), nrow = NULL,
+    initialize = function(expr, inputs, autoUpdate = list(value = TRUE, initBtn = FALSE, showCompare = TRUE), nrow = NULL,
                           ncol = NULL, returnFunc = function(widget, envs) {widget}) {
       expr <<- expr
       inputList <<- inputs$inputList
@@ -224,22 +224,23 @@ MWController <- setRefClass(
     },
 
     getModuleUI = function(gadget = TRUE, saveBtn = TRUE, addBorder = !gadget) {
-      function(ns, okBtn = gadget, width = "100%", height = "400px") {
+      function(ns, okBtn = gadget, width = "100%", height = "400px", fillPage = TRUE) {
         #ns <- shiny::NS(id)
         mwUI(ns, uiSpec, nrow, ncol, outputFunc,
              okBtn = okBtn, updateBtn = !autoUpdate$value, saveBtn = saveBtn,
              areaBtns = length(uiSpec$inputs$ind) > 1, border = addBorder,
-             width = width, height = height)
+             width = width, height = height, fillPage = fillPage,
+             showCompare = autoUpdate$showCompare)
       }
     },
 
-    render = function(output, session) {
+    render = function(output, session, fillPage) {
       if (initialized) return()
       ns <- session$ns
       tryCatch({
         init()
         setShinySession(output, session)
-        output$ui <- renderUI(getModuleUI()(ns, height = "100%"))
+        output$ui <- renderUI(getModuleUI()(ns, height = "100%", fillPage = fillPage))
 
         lapply(inputList$inputs, function(input) {
           # Update input visibility
@@ -260,7 +261,7 @@ MWController <- setRefClass(
     },
 
     getModuleServer = function() {
-      function(input, output, session, ...) {
+      function(input, output, session, fillPage = TRUE, ...) {
 
         controller <- .self$clone()
 
@@ -270,7 +271,7 @@ MWController <- setRefClass(
           for (n in names(reactiveValueList)) {
             controller$setValue(n, reactiveValueList[[n]](), reactive = TRUE)
           }
-          controller$render(output, session)
+          controller$render(output, session, fillPage = fillPage)
         })
 
         lapply(names(controller$inputList$inputs), function(id) {
@@ -345,6 +346,7 @@ replaceInputs <- function(inputs, newInputs, envs) {
     else if (el$type == "group") {
       params <- replaceInputs(el$value, newInputs, envs)
       params$.display <- el$display
+      params$label <- el$label
       newGroup <- do.call(mwGroup, params)
       env <- envs[[1 + get(".id", envir = el$env)]]
       newGroup$init(el$name, env)

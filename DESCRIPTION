@@ -1,8 +1,8 @@
 Package: manipulateWidget
 Type: Package
 Title: Add Even More Interactivity to Interactive Charts
-Version: 0.8.0
-Date: 2017-11-27
+Version: 0.9.0
+Date: 2018-03-26
 Authors@R: c(
     person("Jalal-Edine", "ZAWAM", email = "jalal-edine.zawam@rte-france.com", role = c("aut", "cre")),
     person("Francois", "Guillem", email = "francois.guillem@rte-france.com", role = c("aut")),
@@ -10,7 +10,8 @@ Authors@R: c(
     person("JJ", "Allaire", role = "ctb"),
 	  person("Marion", "Praz", email="mnpraz@gmail.com", role = "ctb", comment = "New user interface"),
 	  person("Benoit", "Thieurmel", role = "ctb", email = "benoit.thieurmel@datastorm.fr"),
-	  person(given = "Titouan", family = "Robert", email = "titouan.robert@datastorm.fr", role = "ctb")
+	  person(given = "Titouan", family = "Robert", email = "titouan.robert@datastorm.fr", role = "ctb"),
+	  person("Duncan", "Murdoch", email = "murdoch.duncan@gmail.com", role = "ctb")
     )
 Description: Like package 'manipulate' does for static graphics, this package
     helps to easily add controls like sliders, pickers, checkboxes, etc. that 
@@ -27,14 +28,15 @@ RoxygenNote: 6.0.1
 VignetteBuilder: knitr
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2017-12-07 09:00:06 UTC; jalazawa
+Packaged: 2018-03-26 15:02:06 UTC; jalazawa
 Author: Jalal-Edine ZAWAM [aut, cre],
   Francois Guillem [aut],
   RTE [cph],
   JJ Allaire [ctb],
   Marion Praz [ctb] (New user interface),
   Benoit Thieurmel [ctb],
-  Titouan Robert [ctb]
+  Titouan Robert [ctb],
+  Duncan Murdoch [ctb]
 Maintainer: Jalal-Edine ZAWAM <jalal-edine.zawam@rte-france.com>
 Repository: CRAN
-Date/Publication: 2017-12-07 09:32:17 UTC
+Date/Publication: 2018-03-26 15:15:56 UTC
