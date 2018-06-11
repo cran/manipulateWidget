@@ -8,7 +8,9 @@
 #' @param outputFun Function that generates the html elements that will contain
 #'   a given widget
 #' @param okBtn Should the OK Button be added to the UI ?
-#' @param saveBtn Should the Save Button be added to the UI ?
+#' @param saveBtn Should an save button be added to the controls ? For saving output as html. Does not work in RStudio Viewer
+#' @param exportBtn Should an export button be added to the controls ? For saving output as png. Does not work in RStudio Viewer
+#' @param exportType \code{.exportBtn}, using \code{html2canvas} (default) and keeping current zoom, ... or using \code{webshot}
 #' @param updateBtn Should the updateBtn be added to the UI ? Currently unused.
 #' @param width, height	Must be a valid CSS unit (like "100%", "400px", "auto") or a number,
 #' which will be coerced to a string and have "px" appended. Default to "100%" & "400px"
@@ -16,8 +18,8 @@
 #' @return shiny tags
 #'
 #' @noRd
-mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
-                 okBtn = TRUE, saveBtn = TRUE, updateBtn = FALSE,
+mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL, okBtn = TRUE,
+                 saveBtn = TRUE, exportBtn = TRUE, exportType = "html2canvas", updateBtn = FALSE,
                  areaBtns = TRUE, border = FALSE, width = "100%", height = "400px",
                  fillPage = TRUE, showCompare = TRUE) {
 
@@ -28,6 +30,39 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
     script = "manipulate_widget.js",
     style = "manipulate_widget.css"
   )
+
+  if(exportBtn & exportType %in% "html2canvas"){
+
+    fileSaver_dep <- htmltools::htmlDependency(
+      name = "FileSaver",
+      version = "1.1.20151003",
+      src = c(file=system.file("lib/export/FileSaver", package="manipulateWidget")),
+      script = "FileSaver.min.js"
+    )
+
+    Blob_dep <- htmltools::htmlDependency(
+      name = "Blob",
+      version = "1.0",
+      src = c(file=system.file("lib/export/Blob", package="manipulateWidget")),
+      script = "Blob.js"
+    )
+
+    canvastoBlob_dep <- htmltools::htmlDependency(
+      name = "canvas-toBlob",
+      version = "1.0",
+      src = c(file=system.file("lib/export/canvas-toBlob", package="manipulateWidget")),
+      script = "canvas-toBlob.js"
+    )
+
+    html2canvas_dep <- htmltools::htmlDependency(
+      name = "html2canvas",
+      version = "0.5.0",
+      src = c(file=system.file("lib/export/html2canvas", package="manipulateWidget")),
+      script = "html2canvas.js"
+    )
+
+    htmldep <- list(htmldep, fileSaver_dep, Blob_dep, canvastoBlob_dep, html2canvas_dep)
+  }
 
   showSettings <- inputs$ncharts == 1 || length(inputs$inputs$shared) > 0
   if (border) class <- "mw-container with-border"
@@ -40,7 +75,7 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
         style = paste("width:", width, ";height:", height, ";"),
         fillRow(
           flex = c(NA, NA, 1),
-          .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, updateBtn, areaBtns, showCompare),
+          .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, exportBtn, exportType, updateBtn, areaBtns, showCompare),
           .uiInputs(ns, inputs),
           .uiChartarea(ns, inputs$ncharts, nrow, ncol, outputFun)
         )
@@ -48,31 +83,31 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
     )
   } else {
     container <- tags$div(
-        class = class,
-        fillRow(
-          flex = c(NA, NA, 1),
-          width = width, height = height,
-          .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, updateBtn, areaBtns, showCompare),
-          .uiInputs(ns, inputs),
-          .uiChartarea(ns, inputs$ncharts, nrow, ncol, outputFun)
-        )
+      class = class,
+      fillRow(
+        flex = c(NA, NA, 1),
+        width = width, height = height,
+        .uiMenu(ns, inputs$ncharts, nrow, ncol, showSettings, okBtn, saveBtn, exportBtn, exportType, updateBtn, areaBtns, showCompare),
+        .uiInputs(ns, inputs),
+        .uiChartarea(ns, inputs$ncharts, nrow, ncol, outputFun)
       )
+    )
   }
 
   htmltools::attachDependencies(container, htmldep, TRUE)
 }
 
 .uiInputs <- function(ns, inputs) {
-   inputs <- c(list(inputs$inputs$shared), inputs$inputs$ind)
-   ids <- ns(c("mw-shared-inputs", paste0("mw-ind-inputs-", 1:(length(inputs) - 1))))
-   inputs <- mapply(function(x, id) {
-     if (length(x) == 0) return(NULL)
-     content <- lapply(x, function(i) i$getHTML(ns))
-     tags$div(class = "mw-inputs", id = id, shiny::tagList(content))
-   }, x = inputs, id = ids, USE.NAMES = FALSE, SIMPLIFY = FALSE)
+  inputs <- c(list(inputs$inputs$shared), inputs$inputs$ind)
+  ids <- ns(c("mw-shared-inputs", paste0("mw-ind-inputs-", 1:(length(inputs) - 1))))
+  inputs <- mapply(function(x, id) {
+    if (length(x) == 0) return(NULL)
+    content <- lapply(x, function(i) i$getHTML(ns))
+    tags$div(class = "mw-inputs", id = id, shiny::tagList(content))
+  }, x = inputs, id = ids, USE.NAMES = FALSE, SIMPLIFY = FALSE)
 
-   inputs$class <- "mw-input-container"
-   do.call(tags$div, inputs)
+  inputs$class <- "mw-input-container"
+  do.call(tags$div, inputs)
 }
 
 .uiChartarea <- function(ns, ncharts, nrow, ncol, outputFun) {
@@ -90,12 +125,14 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
   })
 
   tags$div(
+    class = ns("mw-chart-area"),
     style = "height:100%;width:100%",
     shiny::tagList(outputEls)
   )
 }
 
-.uiMenu <- function(ns, ncharts, nrow, ncol, settingsBtn, okBtn, saveBtn, updateBtn, areaBtns, showCompare = TRUE) {
+.uiMenu <- function(ns, ncharts, nrow, ncol, settingsBtn, okBtn, saveBtn,
+                    exportBtn, exportType, updateBtn, areaBtns, showCompare = TRUE) {
   container <- tags$div(
     class="mw-menu"
   )
@@ -131,10 +168,32 @@ mwUI <- function(ns, inputs, nrow = 1, ncol = 1, outputFun = NULL,
   }
 
   if (saveBtn) {
-    bottom_px <- ifelse(okBtn, "bottom: 80px;", "bottom: 30px;")
-    saveBtnInput <- shiny::downloadButton(ns("save"), label = "", class = "mw-btn mw-btn-save",
+    bottom_px <- ifelse(okBtn, "bottom: 80px;font-size: 8px;", "bottom: 30px;font-size: 8px;")
+
+    saveBtnInput <- shiny::downloadButton(ns("save"), label = "HTML", class = "mw-btn mw-btn-save",
                                      style = bottom_px)
     container <- tagAppendChild(container, saveBtnInput)
+  }
+
+  if (exportBtn) {
+    if(xor(okBtn, saveBtn)){
+      bottom_px <-  "bottom: 80px;font-size: 8px;"
+    } else if(okBtn && saveBtn){
+      bottom_px <-  "bottom: 130px;font-size: 8px;"
+    } else {
+      bottom_px <-  "bottom: 30px;font-size: 8px;"
+    }
+
+    if(exportType %in% "html2canvas"){
+      exportBtnInput <- shiny::actionButton(ns("export"), icon = icon("download"), label = "PNG",
+                                            class = "mw-btn mw-btn-export", style = bottom_px,
+                                            onclick = sprintf("saveAsPNG('%s')", ns("mw-chart-area")))
+    } else {
+      exportBtnInput <- shiny::downloadButton(ns("export"), label = "PNG", class = "mw-btn mw-btn-export",
+                                            style = bottom_px)
+    }
+
+    container <- tagAppendChild(container, exportBtnInput)
   }
 
   container

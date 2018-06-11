@@ -1,5 +1,14 @@
 <!-- Copyright © 2016 RTE Réseau de transport d’électricité --->
 
+# manipulateWidget 0.10.0 (2018-05-30)
+
+## New features
+* UI has now a button to save the current chart in an PNF file.`manipulateWidget`gains a new parameter ".exportBtn" to show or hide this button.
+
+## Bugfixes
+* Passing `.saveBtn` using module
+* Fix reset widget after saving in .html
+
 # manipulateWidget 0.9.0 (2018-01-29)
 
 ## New features

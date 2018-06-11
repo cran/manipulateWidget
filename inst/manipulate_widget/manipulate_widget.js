@@ -22,4 +22,19 @@ function select(el, id) {
   }
 }
 
+function saveAsPNG(id){
+  var chart_area = document.getElementsByClassName(id);
+  if(chart_area[0]){
+    html2canvas(chart_area[0], {
+      background :'#FFFFFF',
+      useCORS : true,
+      onrendered: function(canvas) {
+        canvas.toBlobHD(function(blob) {
+          saveAs(blob, "mw-export");
+        }, "image/png");
+      }
+    });
+  }
+}
+
 
