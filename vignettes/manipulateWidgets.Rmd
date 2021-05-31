@@ -69,7 +69,7 @@ combineWidgets(plotRandomTS(1), plotRandomTS(2))
 
 The functions tries to find the best number of columns and rows. But one can control them with parameters `nrow`and `ncol`. It is also possible to control their relative size with parameters `rowsize` and `colsize`. To achieve complex layouts, it is possible to use nested combined widgets. Here is an example of a complex layout.
 
-```{r combine_complex_layout, , out.width="100%"}
+```{r combine_complex_layout, out.width="100%"}
 combineWidgets(
   ncol = 2, colsize = c(2, 1),
   plotRandomTS(1),
@@ -247,4 +247,4 @@ manipulateWidget(myMapFun(radius, color, .initial, .session, .output),
 
 `manipulateWidget` uses Shiny, so it does not work in a "normal" Rmarkdown document. If one uses the function in a code chunck, the htmlwidget will be outputed with the default values of the parameters and there will be no interface to modify the parameters.
 
-Nevertheless, it is possible to include a shiny application in a document with the runtime: shiny (see http://rmarkdown.rstudio.com/authoring_shiny.html). In such setting `manipulateWidget` works normally and the document can be published on a shiny server to let final users play with the parameters of the document.
+Nevertheless, it is possible to include a shiny application in a document with the runtime: shiny (see https://bookdown.org/yihui/rmarkdown/shiny-documents.html). In such setting `manipulateWidget` works normally and the document can be published on a shiny server to let final users play with the parameters of the document.

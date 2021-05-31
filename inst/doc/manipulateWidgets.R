@@ -28,7 +28,7 @@ plotRandomTS <- function(id) {
 
 combineWidgets(plotRandomTS(1), plotRandomTS(2))
 
-## ----combine_complex_layout, , out.width="100%"-------------------------------
+## ----combine_complex_layout, out.width="100%"---------------------------------
 combineWidgets(
   ncol = 2, colsize = c(2, 1),
   plotRandomTS(1),

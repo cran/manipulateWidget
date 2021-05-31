@@ -1,7 +1,7 @@
 Package: manipulateWidget
 Type: Package
 Title: Add Even More Interactivity to Interactive Charts
-Version: 0.10.1
+Version: 0.11.0
 Authors@R: c(
     person("Veronique", "Bachelier", email = "veronique.bachelier@rte-france.com", role = c("aut", "cre")),
     person("Jalal-Edine", "ZAWAM", role = "aut"),
@@ -19,15 +19,17 @@ Description: Like package 'manipulate' does for static graphics, this package
     chart created with package 'htmlwidgets'.
 URL: https://github.com/rte-antares-rpackage/manipulateWidget
 License: GPL (>= 2) | file LICENSE
+Depends: R (>= 2.10)
 Imports: shiny (>= 1.0.3), miniUI, htmltools, htmlwidgets, knitr,
-        methods, tools, base64enc, grDevices, codetools, webshot
+        methods, tools, base64enc, grDevices, codetools, webshot,
+        shinyjs
 Suggests: dygraphs, leaflet, plotly, xts, rmarkdown, testthat, covr
 LazyData: TRUE
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2020-02-24 12:57:33 UTC; perri
+Packaged: 2021-05-31 07:11:14 UTC; bthie
 Author: Veronique Bachelier [aut, cre],
   Jalal-Edine ZAWAM [aut],
   Francois Guillem [aut],
@@ -39,4 +41,4 @@ Author: Veronique Bachelier [aut, cre],
   Duncan Murdoch [ctb]
 Maintainer: Veronique Bachelier <veronique.bachelier@rte-france.com>
 Repository: CRAN
-Date/Publication: 2020-02-24 18:10:02 UTC
+Date/Publication: 2021-05-31 07:50:02 UTC
