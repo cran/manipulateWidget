@@ -1,7 +1,7 @@
-566c5dcd8349dafadfccb64af4f31e4f *DESCRIPTION
+c30e91cccf61dcc8cfe82f832d833a99 *DESCRIPTION
 8eb461f447c32f3085f846907a97ca26 *LICENSE
 183c4431f7a63a83dc1aa0829f81ba4c *NAMESPACE
-89562124c2fc984b2c9fb445fe1b6bf8 *NEWS.md
+1aacb6f490c7676fef8f4998959500b5 *NEWS.md
 4d579e8ffe5cc3d46e7b22c65990cd4c *R/combine_widgets.R
 c3d9e88a1a2735a66ca94f9ca1b0bd1a *R/compare_options.R
 1487daeaeb24209a128ec782c642ae49 *R/controller.R
@@ -24,11 +24,11 @@ a676d211ed3c8db47aff872704bc638f *R/shiny_module_menu.R
 70dffa82bef2a66aec1a27ba3ed6dcb4 *R/static_image.R
 a0861c4288e5bf748bbd1cbe080ab51c *R/translations.R
 8abc0e6b6ae9688d880c777757de51e5 *R/zzz.R
-3c3ecc42c34b3d4dd1afc9bfecaa36d2 *build/vignette.rds
+31fab10164b229b70f8ebfb40f45a21f *build/vignette.rds
 bfc28e676131fdd069dbfe1fde2ac518 *data/worldEnergyUse.rda
 f031900abbc377c6997ca25f002fda77 *inst/doc/manipulateWidgets.R
 5469991714390e0bd2a3233ade366023 *inst/doc/manipulateWidgets.Rmd
-c7af6fd35ce8919932a7d324d4bddb90 *inst/doc/manipulateWidgets.html
+85f662b50cce03951013bbe267dcf6df *inst/doc/manipulateWidgets.html
 58bda3266ee4cb61246228098ec7d96c *inst/htmlwidgets/combineWidgets.css
 4ffdfd9ca9f4f3529db7af42e819b189 *inst/htmlwidgets/combineWidgets.js
 be45bfac471843443b2e9365edf3996c *inst/htmlwidgets/combineWidgets.yaml
@@ -73,7 +73,7 @@ a4305f6bbe2b613b0b078696b2a01a7b *man/worldEnergyUse.Rd
 59fc0111b1c9297fe5a21dc541f47ae3 *tests/testthat/test-input_class.R
 9383628fa1a27abb75299ec643f6c2ce *tests/testthat/test-input_env.R
 74dfe53bcef9801aad4cf0724fc37bc2 *tests/testthat/test-input_list_class.R
-ac45a9082de873d1a539c0b4e4c6cb15 *tests/testthat/test-inputs.R
+1f6051a8dc557b74e3bd8acfb25b1d97 *tests/testthat/test-inputs.R
 42540b4b2cf5b3245e7736b11b0eaa31 *tests/testthat/test-manipulate_widget.R
 b77542bb323be96b2875d7dad879a9dd *tests/testthat/test-mwGroup.R
 7229bfb47058952a5c5c82dcb32a3cd7 *tests/testthat/test-mwModuleUI.R

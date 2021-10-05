@@ -1,7 +1,7 @@
 Package: manipulateWidget
 Type: Package
 Title: Add Even More Interactivity to Interactive Charts
-Version: 0.11.0
+Version: 0.11.1
 Authors@R: c(
     person("Veronique", "Bachelier", email = "veronique.bachelier@rte-france.com", role = c("aut", "cre")),
     person("Jalal-Edine", "ZAWAM", role = "aut"),
@@ -25,11 +25,11 @@ Imports: shiny (>= 1.0.3), miniUI, htmltools, htmlwidgets, knitr,
         shinyjs
 Suggests: dygraphs, leaflet, plotly, xts, rmarkdown, testthat, covr
 LazyData: TRUE
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 VignetteBuilder: knitr
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2021-05-31 07:11:14 UTC; bthie
+Packaged: 2021-10-05 08:27:14 UTC; BenoitThieurmel
 Author: Veronique Bachelier [aut, cre],
   Jalal-Edine ZAWAM [aut],
   Francois Guillem [aut],
@@ -41,4 +41,4 @@ Author: Veronique Bachelier [aut, cre],
   Duncan Murdoch [ctb]
 Maintainer: Veronique Bachelier <veronique.bachelier@rte-france.com>
 Repository: CRAN
-Date/Publication: 2021-05-31 07:50:02 UTC
+Date/Publication: 2021-10-05 08:50:09 UTC
